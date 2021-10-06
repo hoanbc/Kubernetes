@@ -1,0 +1,13 @@
+### Tổng quan về kubernetes
+
+Thành phần master:
+API Server: cung cấp các RESTful APIs cho các thành phần khác trong Kubernetes Master. Chúng ta có thể lấy thông tin về một resource trong Kubernetes, theo dõi sự thay đổi của chúng hoặc tạo mới một resource sử dụng các APIs này. API Server lưu thông tin của các đối tượng trong Kubenetes vào etcd.
+Etcd: là một hệ thống phân tán, mã nguồn mở, dùng để lưu trữ các giá trị key-value. Kubernetes dùng etcd để lưu, cập nhập và nhân bản các data của nó.
+Scheduler: có nhiệm vụ là xác định node nào trong cluster có thể sử dụng để chạy các pods.
+Controller Manager: là tập hợp các vòng điều khiển quan sát các sự thay đổi từ API Server để chắc chắn rằng cluster luôn ở trạng thái mà nó mong muốn.
+
+Thành phần worker:
+Kubelet: chịu trách nhiệm quản lý và báo cáo các hoạt động của node về API Server của Kubernetes Master. Kubelet sẽ chạy các container sử dụng container runtime như Docker. Nó sẽ không quản lý các container không được tạo bởi Kubernetes.
+Kube-proxy: duy trì các quy tắc mạng trên các node. Các quy tắc mạng này cho phép giao tiếp mạng với Prod từ các phiên mạng bên trong hoặc bên ngoài cụm
+
+

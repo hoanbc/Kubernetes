@@ -1,0 +1,35 @@
+### Triển khai K8s sử dụng minikube
+
+1) Máy chủ đã được cài đặt sẵn docker
+2) Tài khoản triển khai có quyền visudo và được add vào nhóm docker
+visudo
+devops ALL=(ALL)        ALL
+
+sudo groupadd docker
+sudo usermod -aG docker devops
+
+Logout and login để hệ thống cập nhật quyền, hoặc sử dụng lệnh newgrp docker
+
+3) Cài đặt kubectl
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+dnf install -y kubectl
+kubectl version --client
+
+4) Cài đặt minikube
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-latest.x86_64.rpm
+sudo rpm -Uvh minikube-latest.x86_64.rpm
+
+minikube config set driver docker
+minikube start --driver=docker
+
+
+kubectl cluster-info

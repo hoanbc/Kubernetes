@@ -1,0 +1,143 @@
+##Install Kubernetes on Red Hat Enterprise Linux (RHEL 8) with CRI-O
+
+Software versions:
+
+Kubernetes v1.21.2
+CRI-0 v1.21.1
+Calico
+
+Step 1: Disable Swap
+As of writing, Kubernetes requires that Swap is disabled on the Linux server. This is so that the kubelet process can reliably schedule memory to the pods. To disable swap, run the following command:
+
+sudo swapoff -a
+To make the change permanent, you will need to edit the fstab file.
+
+Open /etc/fstab, remove the line containing swap and then save the file.
+
+/dev/mapper/rhel_rhel01-swap none                    swap    defaults        0 0
+This will prevent swap from being enabled the next time the system boots.
+
+Step 2: Configure the Network
+Assign a static IP address to your RHEL server (or configure your DHCP server to reserve an IP) then add this address to your hosts file. For example, I have assigned a static IP address of 10.1.1.11 to my host.
+
+Make sure the hostname of your machine resolves to the static IP by putting an entry in the /etc/hosts file. For example:
+
+10.1.1.11   rhel01
+
+Install iproute-tc with the following command:
+sudo dnf install -y iproute-tc
+
+Configure iptables to see bridged traffic.
+
+# Create the .conf file to load the modules at bootup
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+# Set up required sysctl params, these persist across reboots.
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+sudo sysctl --system
+
+Step 3: Open Firewall Ports
+Run the following commands to open the required ports on the firewall.
+
+sudo firewall-cmd --zone=public --add-service=kube-apiserver --permanent
+sudo firewall-cmd --zone=public --add-service=etcd-client --permanent
+sudo firewall-cmd --zone=public --add-service=etcd-server --permanent
+# kubelet API
+sudo firewall-cmd --zone=public --add-port=10250/tcp --permanent
+# kube-scheduler
+sudo firewall-cmd --zone=public --add-port=10251/tcp --permanent
+# kube-controller-manager
+sudo firewall-cmd --zone=public --add-port=10252/tcp --permanent
+# NodePort Services
+sudo firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent
+# apply changes
+sudo firewall-cmd --reload
+Check the documentation to make sure the correct ports are open. The settings applied above should open all the required ports for a node that acts as a control plane and a worker node.
+
+
+Step 4: Disable SELinux
+For this tutorial, we will disable SELinux but you should leave it enabled and apply the correct configuration changes if you know what you are doind.
+
+sudo setenforce 0
+sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
+Step 5: Install CRI-O
+export VERSION=1.21
+sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:$VERSION.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:$VERSION/CentOS_8/devel:kubic:libcontainers:stable:cri-o:$VERSION.repo
+sudo yum install cri-o -y
+
+Enable and start cri-o service
+sudo systemctl enable --now cri-o
+sudo systemctl start cri-o
+
+
+Step 6: Install Kubernetes
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kubelet kubeadm kubectl
+EOF
+
+sudo yum install -y kubelet-1.21.5-0 kubeadm-1.21.5-0 kubectl-1.21.5-0 --disableexcludes=kubernetes
+
+###Enable and start kubelet service
+sudo systemctl enable --now kubelet
+sudo systemctl start kubelet
+
+Step 7: Create Cluster
+sudo kubeadm init --pod-network-cidr=172.16.0.0/16
+
+Make kubectl work for current user.
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+Remove the taints from this node so that it can be used as a worker node.
+kubectl taint nodes --all node-role.kubernetes.io/master-
+
+Step 8: Install Calico Pod network add-on
+Run the following commands to deploy the Calico Pod network add-on:
+
+https://docs.projectcalico.org/manifests/calico.yaml
+You can check to see if the pods have started with the following watch command:
+
+watch kubectl get pods -n calico-system
+Wait until each pod has the STATUS of Running then terminate the watch utility.
+
+Check to see if the node is ready with the following command:
+
+kubectl get nodes -o wide
+You should see an output like the following:
+
+NAME     STATUS   ROLES                  AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                               KERNEL-VERSION                CONTAINER-RUNTIME
+rhel01   Ready    control-plane,master   4m40s   v1.21.2   10.1.1.11     <none>        Red Hat Enterprise Linux 8.4 (Ootpa)   4.18.0-305.3.1.el8_4.x86_64   cri-o://1.21.1
+Conclusion
+You now have a single-host Kubernetes cluster running on Red Hat Enterprise Linux 8. We used CRI-O as a lightweight alternative to the Docker container runtime and we used Calico for the Pod network. You’re now ready to deploy some pods or join some worker nodes to the cluster.
+
+
+
+
+https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
+https://kubernetes.io/docs/setup/production-environment/container-runtimes/
+https://github.com/cri-o/cri-o#compatibility-matrix-cri-o--kubernetes

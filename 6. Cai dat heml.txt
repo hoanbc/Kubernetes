@@ -1,0 +1,15 @@
+3.1.2. Installing Helm
+Prerequisites
+
+You have installed Go, version 1.13 or higher.
+3.1.2.1. On Linux
+Download the Helm binary and add it to your path:
+
+# curl -L https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/helm-linux-amd64 -o /usr/local/bin/helm
+Make the binary file executable:
+
+# chmod +x /usr/local/bin/helm
+Check the installed version:
+
+$ helm version
+version.BuildInfo{Version:"v3.0", GitCommit:"b31719aab7963acf4887a1c1e6d5e53378e34d93", GitTreeState:"clean", GoVersion:"go1.13.4"}

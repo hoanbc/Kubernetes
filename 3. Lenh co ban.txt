@@ -1,0 +1,54 @@
+kubectl get node
+kubectl get pods
+
+kubectl create deploy nginx --image=nginx
+kubectl delete deploy nginx --image=nginx
+
+kubectl create deploy -f pod.yaml
+kubectl apply -f pod.yaml
+
+
+kubectl get services
+
+
+ kubectl scale replicaset myapp-replicaset --replicas=2
+kubectl edit replicaset myapp-replicaset
+ kubectl describe replicaset myapp-replicaset
+ 
+ kubectl get replicaset
+ 
+kubectl get deployments
+
+
+
+kubectl rollout status deployment/myapp
+kubectl rollout history deployment/myapp
+
+kubectl apply -f deploy.yaml
+
+kubectl set image deployment/myapp nginx=nginx:1.9.1
+
+kubectl rollout undo deployment/myapp
+
+LoadBalancer -> NodePort -> ClusterIp
+NodePort (Physical) -> Port(Docker) -> TargetPort(Pod)
+
+
+
+
+kubectl run pod nginx --image=nginx --dry-run=client -o yaml > nginx.yaml
+
+
+
+kubectl lable node node1 size=node1
+file.yaml
+spec:
+	containers:
+	nodeSelector:
+		size: node1
+	nodeName: node2
+	
+	
+kubectl create ns test
+kubectl run nginx --image=nginx:1.19 -n test
+
