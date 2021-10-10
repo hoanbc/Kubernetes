@@ -1,0 +1,49 @@
+###Use Helm deploy Rancher in K8S
+
+Case: Use Helm deploy rancher in k8s with certificate from file
+
+Step1: Add the Helm Chart Repository
+[root@srv-k8s-master1 ~]# helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+
+Step2: Create a Namespace for Rancher
+[root@srv-k8s-master1 ~]# kubectl create namespace cattle-system
+
+
+Step3: Install Rancher with certificate from file
+[root@srv-k8s-master1 ~]# helm install rancher rancher-latest/rancher \
+  --namespace cattle-system \
+  --set hostname=rancher.systemtest.xyz \
+  --set bootstrapPassword=admin \
+  --set ingress.tls.source=secret 
+
+Step4: Adding TLS Secrets
+[root@srv-k8s-master1 ~]# kubectl -n cattle-system create secret tls tls-rancher-ingress --cert=/ca/tls.crt   --key=/ca/tls.key
+
+Note: rename certificate.crt to tls.crt and private.key to tls.key
+
+Step 5: Verify that the Rancher Service is success deployed
+[root@srv-k8s-master1 ~]# kubectl -n cattle-system rollout status deploy/rancher
+[root@srv-k8s-master1 ~]# kubectl -n cattle-system get deploy rancher
+
+Step6: Edit svc rancher to NodePort ( on this case we not yet have ingress controller)
+[root@srv-k8s-master1 ~]# kubectl edit -n cattle-system svc/rancher
+From: 
+  sessionAffinity: None
+  type: ClusterIP
+status:
+
+To:
+  sessionAffinity: None
+  type: NodePort
+status:
+
+Step7: Get info NodePort Rancher UI
+[root@srv-k8s-master1 ~]# kubectl get svc -n cattle-system
+NAME              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE
+rancher           NodePort    10.104.12.213   <none>        80:32659/TCP,443:31063/TCP   7d21h
+
+
+Step8: Get password Rancher UI
+[root@srv-k8s-master1 ~]# kubectl get secret --namespace cattle-system bootstrap-secret -o go-template='{{ .data.bootstrapPassword|base64decode}}{{ "\n" }}'
+
+Step9: Access Rancher UI with https://masterip:31063

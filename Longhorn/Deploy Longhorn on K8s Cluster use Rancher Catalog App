@@ -1,0 +1,11 @@
+###Deploy Longhorn on K8s Cluster use Rancher Catalog App
+
+Step1: Deploy open-iscsi
+kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.2.2/deploy/prerequisite/longhorn-iscsi-installation.yaml
+
+Step2: Deploy nfs-client
+kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.2.2/deploy/prerequisite/longhorn-nfs-installation.yaml
+
+Step3: Login to Rancher UI -> Chosse cluster need deploy -> Apps & Marketplace -> Chart -> Longhorn -> Install -> Default Setting ->  Install
+
+Step4: In left panel of Rancher, you can see Longhorn, Click to it for connect to Longhorn UI

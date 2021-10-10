@@ -1,0 +1,22 @@
+###Change replica auto balance 
+
+Step1: Login to Longhorn UI -> Setting -> General -> Replica Auto Balance -> Change to mode you want -> save
+
+
+---Global setting
+disabled. This is the default option, no replica auto-balance will be done.
+least-effort. This option instructs Longhorn to balance replicas for minimal redundancy. For example, after adding node-2, a volume with 4 off-balanced replicas will only rebalance 1 replica.
+node-1
++-- replica-a
++-- replica-b
++-- replica-c
+node-2
++-- replica-d
+best-effort. This option instructs Longhorn to try balancing replicas for even redundancy. For example, after adding node-2, a volume with 4 off-balanced replicas will rebalance 2 replicas.
+
+node-1
++-- replica-a
++-- replica-b
+node-2
++-- replica-c
++-- replica-d

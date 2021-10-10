@@ -1,0 +1,11 @@
+###How to install Heml in CentOS or RedHat
+
+Step1: Installing Helm
+curl -L https://mirror.openshift.com/pub/openshift-v4/clients/helm/latest/helm-linux-amd64 -o /usr/local/bin/helm
+
+Step2: Assign execute permission for Helm
+chmod +x /usr/local/bin/helm
+
+Step3: Check the installed version:
+$ helm version
+version.BuildInfo{Version:"v3.0", GitCommit:"b31719aab7963acf4887a1c1e6d5e53378e34d93", GitTreeState:"clean", GoVersion:"go1.13.4"}

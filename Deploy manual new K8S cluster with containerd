@@ -1,0 +1,161 @@
+###Deploy manual new K8S cluster with containerd
+
+Case: Deploy K8S cluster with kubeadm use containerd as container runtimes. Haproxy load port 6443 for Kubernetes control plane.
+
+Topology:
+                            --> master1:6443
+Client --> Haproxy:6443     --> master2:6443    --> worker
+                            --> master3:6443
+
+Step1: Open firewall on all master node and worker node
+--- Master node
+systemctl start firewalld  
+systemctl enable firewalld  
+firewall-cmd --add-port={6443,2379-2380,10250,10259,10257}/tcp --permanent
+firewall-cmd --reload
+
+---Worker node
+systemctl start firewalld  
+systemctl enable firewalld  
+firewall-cmd --add-port={10250,30000-32767}/tcp --permanent
+firewall-cmd --reload
+
+Step2: Load network module on all master node and worker node
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+overlay
+br_netfilter
+EOF
+
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+
+sudo sysctl --system
+
+Step3: Disable swap on all master node and worker node
+swapoff -a
+
+vim /etc/fstab 
+/dev/mapper/rhel-root   /                       xfs     defaults        0 0
+UUID=7fbc6e94-679d-4eb5-9ffc-a2c92887a071 /boot                   xfs     defaults        0 0
+#/dev/mapper/rhel-swap   none                    swap    defaults        0 0
+
+Step4: Install container runtimes on all master node and worker node
+---Setting Cgroup v2
+yum install -y grubby &&  sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=1"
+
+---Install containerd
+sudo yum install -y yum-utils
+sudo yum-config-manager    --add-repo   https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install containerd.io -y
+
+
+sudo mkdir -p /etc/containerd
+containerd config default | sudo tee /etc/containerd/config.toml
+
+vim /etc/container/config.toml
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+  ...
+  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+    SystemdCgroup = true   <-- add this line
+
+sudo systemctl restart containerd
+sudo systemctl enable containerd
+
+
+Step5: Install kubeadm kubectl kubelet on all master node and worker node
+---Add repo kubernetes
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+exclude=kubelet kubeadm kubectl
+EOF
+
+---Find all version available for kubernetes
+yum list --showduplicates kubeadm --disableexcludes=kubernetes
+
+---Install kubeadm kubectl kubelet
+sudo yum install -y kubelet-1.21.5 kubeadm-1.21.5 kubectl-1.21.5 --disableexcludes=kubernetes
+sudo systemctl enable --now kubelet
+sudo systemctl restart kubelet
+
+
+Step6: Create new cluster (do this in only one master node)
+kubeadm init --control-plane-endpoint="192.168.1.220:6443" --upload-certs --apiserver-advertise-address=192.168.1.221 --service-cluster-ip-range=172.0.0.0/16 --pod-network-cidr=172.1.0.0/16 --node-cidr-mask-size=25 
+
+Node:
+--control-plane-endpoint="192.168.1.220:6443"   ->  IP address of haproxy, this loadbalancing port 6443
+--apiserver-advertise-address=192.168.1.221     ->  IP of master node
+--service-cluster-ip-range=172.0.0.0/16         ->  Range ip address for assign service
+--pod-network-cidr=172.1.0.0/16                 ->  Range ip address for assign pods
+--node-cidr-mask-size=24                        ->  Size cidr assign for node
+
+
+---After new cluster deploy success, you will see result with this command for join new node to this cluster. But you should use it after deploy success calico network on step 8 and 9.
+###Join other master node to cluster
+  kubeadm join 192.168.1.220:6443 --token 96rkuq.bgae5cxqz036nqws \
+        --discovery-token-ca-cert-hash sha256:830dd3f50bfea20cd745596b8b9466b3522adff8ebe9ceb9655574d29374ca33 \
+        --control-plane --certificate-key 59c95507b1fde671e526a02dc2f50e36be20477f338dca2a326fc079ad9689e4 --apiserver-advertise-address=192.168.1.223
+
+###Join other worker node to cluster
+kubeadm join 192.168.1.220:6443 --token 96rkuq.bgae5cxqz036nqws \
+        --discovery-token-ca-cert-hash sha256:830dd3f50bfea20cd745596b8b9466b3522adff8ebe9ceb9655574d29374ca33
+
+Step7: Set variable for kubectl on all master node
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Step8: Deploy calico network (do this in only one master node)
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+
+Step9: Config haproxy for loadbalancing port 6443
+#Mode-TCP
+defaults
+   mode						tcp 
+   log						127.0.0.1 local0
+   option					log-separate-errors
+   option					dontlognull
+   option					log-health-checks
+   timeout connect			5s
+   timeout queue			10s
+   timeout client			60s
+   timeout server			60s
+   timeout http-keep-alive	5s
+   maxconn					30000
+   bind-process				21
+
+#-----K8S-Frontend-----#
+frontend kubernetes-frontend
+   bind 192.168.1.220:6443
+   mode tcp
+   bind-process 4
+   option tcplog
+   default_backend kubernetes-backend
+
+#-----K8S-Backend-----#
+backend kubernetes-backend
+    mode tcp
+    option tcp-check
+    balance roundrobin
+    server srv-k8s-master1 192.168.1.221:6443 check fall 3 rise 2
+    server srv-k8s-master2 192.168.1.222:6443 check fall 3 rise 2
+	server srv-k8s-master3 192.168.1.223:6443 check fall 3 rise 2
+
+Step10: After step 9, join new master node and new worker node to this cluster.
+Note: when use kubeadm join new master node 
+  kubeadm join 192.168.1.220:6443 --token 96rkuq.bgae5cxqz036nqws \
+        --discovery-token-ca-cert-hash sha256:830dd3f50bfea20cd745596b8b9466b3522adff8ebe9ceb9655574d29374ca33 \
+        --control-plane --certificate-key 59c95507b1fde671e526a02dc2f50e36be20477f338dca2a326fc079ad9689e4 --apiserver-advertise-address=192.168.1.223
+
+--apiserver-advertise-address=192.168.1.223 -> change ip address to new master node

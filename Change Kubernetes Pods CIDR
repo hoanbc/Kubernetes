@@ -1,0 +1,47 @@
+###Change Kubernetes Pods CIDR
+
+Event log: Event(v1.ObjectReference{Kind:"Node", Namespace:"", Name:"kubernetes-node01", UID:"a039216a-1a2f-4e1f-b435-17ebc7741c89", APIVersion:"", Resource Version:"", FieldPath:""}): type: 'Normal' reason: 'CIDRNotAvailable' Node kubernetes-node01 status is now: CIDRNotAvailable
+
+Cause: This is quite a common issue when for example Kubernetes was not properly configured during the initial install, more precisely Kubernetes Pod network address space was not properly provisioned
+
+
+Step1: Check cluster CIDR configuration
+[root@srv-k8s-master1 ~]# ps -ef | grep "cluster-cidr"
+root      241866  241773  1 18:22 ?        00:03:26 kube-controller-manager --allocate-node-cidrs=true --authentication-kubeconfig=/etc/kubernetes/controller-manager.conf 
+--authorization-kubeconfig=/etc/kubernetes/controller-manager.conf --bind-address=127.0.0.1 --client-ca-file=/etc/kubernetes/pki/ca.crt --cluster-cidr=172.16.0.0/22
+--cluster-name=kubernetes --cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt --cluster-signing-key-file=/etc/kubernetes/pki/ca.key 
+--controllers=*,bootstrapsigner,tokencleaner --kubeconfig=/etc/kubernetes/controller-manager.conf --leader-elect=true --port=0 
+--requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt --root-ca-file=/etc/kubernetes/pki/ca.crt 
+--service-account-private-key-file=/etc/kubernetes/pki/sa.key --service-cluster-ip-range=10.96.0.0/12 --use-service-account-credentials=true
+
+
+On this output we have to check the value of --cluster-cidr= which in this particular case it’s this:
+--cluster-cidr=172.16.0.0/22
+
+
+[root@srv-k8s-master1 ~]# kubectl get nodes -o jsonpath='{.items[*].spec.podCIDR}'
+172.16.0.0/24 172.16.3.0/24 172.16.1.0/24 172.16.2.0/24
+
+Step2: Change Kubernetes Pods CIDR
+vim /etc/kubernetes/manifests/kube-controller-manager.yaml
+spec:
+  containers:
+  - command:
+    - kube-controller-manager
+    ...
+    - --cluster-cidr=172.16.0.0/22  to -> cluster-cidr=172.16.0.0/16
+    - --node-cidr-mask-size=25      <- add new
+    ...
+
+Step3: Restart Kubelet Service
+[root@srv-k8s-master1 ~]# systemctl restart kubelet
+
+
+Step4: Verify Pods CIDR Subnet
+[root@srv-k8s-master1 ~]# ps -ef | grep "cluster-cidr"
+root      241866  241773  1 18:22 ?        00:03:26 kube-controller-manager --allocate-node-cidrs=true --authentication-kubeconfig=/etc/kubernetes/controller-manager.conf 
+--authorization-kubeconfig=/etc/kubernetes/controller-manager.conf --bind-address=127.0.0.1 --client-ca-file=/etc/kubernetes/pki/ca.crt --cluster-cidr=172.16.0.0/16
+--cluster-name=kubernetes --cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt --cluster-signing-key-file=/etc/kubernetes/pki/ca.key 
+--controllers=*,bootstrapsigner,tokencleaner --kubeconfig=/etc/kubernetes/controller-manager.conf --leader-elect=true --port=0 
+--requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt --root-ca-file=/etc/kubernetes/pki/ca.crt 
+--service-account-private-key-file=/etc/kubernetes/pki/sa.key --service-cluster-ip-range=10.96.0.0/12 --use-service-account-credentials=true

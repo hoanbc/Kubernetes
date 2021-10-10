@@ -1,0 +1,62 @@
+###How to increase the number of pods limit per Kubernetes Node
+
+A cluster is a set of nodes (physical or virtual machines) running Kubernetes agents, managed by the control plane. Kubernetes v1.22 supports clusters with up to 5000 nodes. More specifically, Kubernetes is designed to accommodate configurations that meet all of the following criteria:
+Max Nodes : 5000
+Max Pods : 150,000
+Max Containers : 300,000
+Max Pods/Node : 110
+
+Step 1: Check current maximum pods capacity (cli in master node)
+kubectl get nodes
+NAME      STATUS   ROLES    AGE     VERSION
+kube-01   Ready    master   6d15h   v1.17.3
+kube-02   Ready    <none>   6d15h   v1.17.3
+kube-03   Ready    <none>   6d15h   v1.17.3
+
+
+kubectl describe node kube-03 | grep -i capacity -A 13
+Capacity:
+  cpu:                2
+  ephemeral-storage:  81120924Ki
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             4046380Ki
+  pods:               110
+Allocatable:
+  cpu:                2
+  ephemeral-storage:  74761043435
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             3943980Ki
+  pods:               110
+
+Step2: Log in to the node for which you would like to change (cli in worker node)
+CentOS/ Redhat: /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf 
+Ubuntu: /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+
+root@srv-k8s-worker1 ~]# vi /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf 
+ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS
+Change to
+ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS --max-pods=200
+
+Step3: Update Daemon and restart kubelet (cli in worker node)
+systemctl daemon-reload
+systemctl restart kubelet
+
+Step4: Check pods capacity after change (cli in master node)
+kubectl describe node kube-03 | grep -i capacity -A 13
+Capacity:
+  cpu:                2
+  ephemeral-storage:  81120924Ki
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             4046380Ki
+  pods:               243
+Allocatable:
+  cpu:                2
+  ephemeral-storage:  74761043435
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             3943980Ki
+  pods:               243
