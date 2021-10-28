@@ -91,13 +91,13 @@ sudo systemctl restart kubelet
 
 
 Step6: Create new cluster (do this in only one master node)
-kubeadm init --control-plane-endpoint="192.168.1.221:6443" --upload-certs --apiserver-advertise-address=192.168.1.221 --service-cidr=172.0.0.0/16 --pod-network-cidr=172.1.0.0/16
+kubeadm init --control-plane-endpoint="192.168.1.220:6443" --upload-certs --apiserver-advertise-address=192.168.1.221 --service-cidr=10.1.0.0/16 --pod-network-cidr=10.2.0.0/16
 
 Node:
 --control-plane-endpoint="192.168.1.220:6443"   ->  IP address of haproxy, this loadbalancing port 6443
 --apiserver-advertise-address=192.168.1.221     ->  IP of master node
---service-cluster-ip-range=172.0.0.0/16         ->  Range ip address for assign service
---pod-network-cidr=172.1.0.0/16                 ->  Range ip address for assign pods
+--service-cluster-ip-range=10.1.0.0/16         ->  Range ip address for assign service
+--pod-network-cidr=10.2.0.0/16                 ->  Range ip address for assign pods
 --node-cidr-mask-size=24                        ->  Size cidr assign for node
 
 

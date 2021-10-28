@@ -3,9 +3,20 @@
 Step1: Deploy open-iscsi
 kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.2.2/deploy/prerequisite/longhorn-iscsi-installation.yaml
 
+or install open-iscsi
+yum install iscsi-initiator-utils -y
+systemctl enable iscsid
+systemctl start iscsid
+
 Step2: Deploy nfs-client
 kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/v1.2.2/deploy/prerequisite/longhorn-nfs-installation.yaml
 
+or install nfs-utils
+yum install nfs-utils -y
+systemctl enable nfs-utils
+systemctl start nfs-utils
+
 Step3: Login to Rancher UI -> Chosse cluster need deploy -> Apps & Marketplace -> Chart -> Longhorn -> Install -> Default Setting ->  Install
+Node: Services and Load Balancing chosse Rancher-Proxy
 
 Step4: In left panel of Rancher, you can see Longhorn, Click to it for connect to Longhorn UI

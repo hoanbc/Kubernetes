@@ -9,20 +9,20 @@ fdisk /dev/nvme0n2
 Chosse: n -> p -> 1 -> enter -> t -> 1 8e -> w
 
 Step3: Create LVM Group and LVM Volume
-[root@srv-k8s-worker1 ~]# pvcreate /dev/nvme0n2p1
-[root@srv-k8s-worker1 ~]# vmdiskscan 
-[root@srv-k8s-worker1 ~]# vgcreate k8s-data-lvm /dev/nvme0n2p1 
-[root@srv-k8s-worker1 ~]# lvcreate --name k8s-data-vol -l 100%FREE k8s-data-lvm
+pvcreate /dev/nvme0n2p1
+vmdiskscan 
+vgcreate k8s-data-lvm /dev/nvme0n2p1 
+lvcreate --name k8s-data-vol -l 100%FREE k8s-data-lvm
 
 Step4: Format disk use xfs filesystem
-[root@srv-k8s-worker1 ~]# mkdir /k8s-data
-[root@srv-k8s-worker1 ~]# mkfs.xfs /dev/k8s-data-lvm/k8s-data-vol 
+mkdir /k8s-data
+mkfs.xfs /dev/k8s-data-lvm/k8s-data-vol 
 
 Step5: Mount LVM Volume to fstab
-[root@srv-k8s-worker1 ~]# vim /etc/fstab 
+vim /etc/fstab 
 /dev/mapper/k8s--data--lvm-k8s--data--vol       /k8s-data       xfs     defaults        0       0
 
-[root@srv-k8s-worker1 ~]# mount -a
+mount -a
 
 Step6: Login Longhorn UI -> Node -> Edit Node and Disks -> Add Disk -> Fit info as below -> Save
 Name: k8s--data--lvm-k8s--data--vol

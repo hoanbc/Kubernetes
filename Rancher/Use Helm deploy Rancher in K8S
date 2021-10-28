@@ -46,4 +46,4 @@ rancher           NodePort    10.104.12.213   <none>        80:32659/TCP,443:310
 Step8: Get password Rancher UI
 [root@srv-k8s-master1 ~]# kubectl get secret --namespace cattle-system bootstrap-secret -o go-template='{{ .data.bootstrapPassword|base64decode}}{{ "\n" }}'
 
-Step9: Access Rancher UI with https://masterip:31063
+Step9: Access Rancher UI with https://masterip:31063/dashboard/?setup=admin
