@@ -11,7 +11,7 @@ Step1: Open firewall on all master node and worker node
 --- Master node
 systemctl start firewalld  
 systemctl enable firewalld  
-firewall-cmd --add-port={6443,2379-2380,10250-10259}/tcp --permanent
+firewall-cmd --add-port={179,6443,2379-2380,10250-10259}/tcp --permanent
 firewall-cmd --permanent --add-port=8472/udp
 firewall-cmd --add-masquerade --permanent
 firewall-cmd --reload
@@ -19,7 +19,7 @@ firewall-cmd --reload
 ---Worker node
 systemctl start firewalld  
 systemctl enable firewalld  
-firewall-cmd --add-port={10250,30000-32767}/tcp --permanent
+firewall-cmd --add-port={179,10250,30000-32767}/tcp --permanent
 firewall-cmd --add-masquerade --permanent
 firewall-cmd --reload
 
