@@ -29,11 +29,10 @@ name: jenkins
 annotations: {}
 
 
-helm install jenkins -n jenkins -f values.yaml jenkinsci/jenkins
+helm install jenkins -n jenkins-system -f values.yaml jenkinsci/jenkins
 
 Step6: Get password
 jsonpath="{.data.jenkins-admin-password}"
 secret=$(kubectl get secret -n jenkins jenkins -o jsonpath=$jsonpath)
 echo $(echo $secret | base64 --decode)
-
-0bW6FDqdGcUDGTdldiLHcA
+xfHdChQyNWRQ2FATCrXhGd
