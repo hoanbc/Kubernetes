@@ -1,7 +1,7 @@
 ###Deploy nginx ingress in k8s use nodeport
 
 Step1: Download nginx ingress from yaml
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.3/deploy/static/provider/baremetal/deploy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.0/deploy/static/provider/baremetal/deploy.yaml
 
 Step2: Edit ingress
 example: kubectl edit ingress/rancher -n cattle-system
