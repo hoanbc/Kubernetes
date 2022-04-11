@@ -64,6 +64,8 @@ yum install -y grubby &&  sudo grubby --update-kernel=ALL --args="systemd.unifie
 ---Install containerd
 sudo yum install -y yum-utils
 sudo yum-config-manager    --add-repo   https://download.docker.com/linux/centos/docker-ce.repo
+subscription-manager repos --enable=rhel-7-server-extras-rpms
+
 sudo yum install containerd.io -y
 
 
