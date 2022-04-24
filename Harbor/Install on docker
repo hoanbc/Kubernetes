@@ -30,4 +30,4 @@ database:
 data_volume: /data/harbor
 
 cd /data/harbor/config
-./install.sh
+./install.sh --with-trivy
