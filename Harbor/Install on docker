@@ -1,0 +1,33 @@
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+chmod +x /usr/bin/docker-compose
+
+mkdir -p /data/harbor/ssl
+cp /ssl/systemtest-xyz-cer.pem /data/harbor/ssl/
+cp /ssl/systemtest-xyz-key.pemm /data/harbor/ssl/
+
+mkdir -p /data/harbor/data
+mkdir -p /data/harbor/config
+
+
+cd /data/harbor/config
+curl -s https://api.github.com/repos/goharbor/harbor/releases/latest | grep browser_download_url | cut -d '"' -f 4 | grep '\.tgz$' | wget -i -
+tar xvzf harbor-offline-installer*.tgz
+cp harbor.yml.tmpl harbor.yml
+
+vim harbor.yml
+hostname: harbor.systemtest.xyz
+http:
+  port: 80
+https:
+  port: 443
+  certificate: /data/harbor/ssl/systemtest-xyz-cer.pem
+  private_key: /data/harbor/ssl/systemtest-xyz-key.pem
+harbor_admin_password: 123@123a
+database:
+  password: 123@123a
+  max_idle_conns: 100
+  max_open_conns: 900
+data_volume: /data/harbor
+
+cd /data/harbor/config
+./install.sh
