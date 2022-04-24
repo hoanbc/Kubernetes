@@ -1,0 +1,9 @@
+###Create a robot for pull and push
+
+1) Global
+Login harbor -> Administrator -> Robot Accounts -> New Rebot Account -> Name -> Expiration time -> Project Name -> Permission -> Add
+
+2) Project 
+Project -> Project Name -> Robot Accounts -> New Rebot Account -> Name -> Expiration time -> Permission -> Add
+
+Use name and secret for "docker login"
