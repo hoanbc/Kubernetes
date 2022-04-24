@@ -27,7 +27,7 @@ database:
   password: 123@123a
   max_idle_conns: 100
   max_open_conns: 900
-data_volume: /data/harbor
+data_volume: /data/harbor/data
 
 cd /data/harbor/config
 ./install.sh --with-trivy
