@@ -1,0 +1,62 @@
+
+Deploy
+
+kubectl apply -f my-nginx-deploy.yaml
+- my-nginx-deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx
+spec:
+  selector:
+    matchLabels:
+      run: my-nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        run: my-nginx
+    spec:
+      containers:
+        - name: my-nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+
+kubectl get pods -l run=my-nginx
+
+kubectl apply -f my-nginx-svc.yaml
+-my-nginx-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-nginx
+  labels:
+    run: my-nginx
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+  type: LoadBalancer
+  selector:
+    run: my-nginx
+    
+kubectl get svc my-nginx
+
+
+Install MetalLB with Helm
+Source: https://metallb.universe.tf/installation/#installation-with-helm
+
+helm repo add metallb https://metallb.github.io/metallb
+helm install metallb metallb/metallb -f values.yaml
+
+-values.yaml
+configInline:
+  address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+        - 172.16.16.10-172.16.16.100
+
+
+kubectl get svc my-nginx
