@@ -1,0 +1,6 @@
+###Replications project to other registries
+1) Create registries
+Login harbor -> administration -> Registries -> New Endpoint -> Provider: Harbor -> Name -> Endpoint URL: https://harbor2.systemtest.local -> Access ID: admin -> Access Secret: Password -> OK
+
+2) Create replicationes
+Login harbor -> administration -> Replications -> New Replication Rule -> Name -> Replication mode: Push-based -> Destination registry: Step 1 -> Trigger Mode: Event Based -> Delete remote resources when locally deleted -> Bandwith: 20 Mbs -> Save
