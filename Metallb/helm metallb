@@ -1,0 +1,140 @@
+helm show values metallb/metallb   > values.yaml
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+existingConfigMap: ""
+configInline:
+  address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+        - 192.168.1.231-192.168.1.239
+rbac:
+  create: true
+psp:
+  create: true
+prometheus:
+  scrapeAnnotations: false
+  metricsPort: 7472
+  serviceAccount: ""
+  namespace: "hbc-common"
+  podMonitor:
+    enabled: false
+    additionalLabels: {}
+    jobLabel: "app.kubernetes.io/name"
+    interval:
+    metricRelabelings: []
+    relabelings: []
+  prometheusRule:
+    enabled: false
+    additionalLabels: {}
+    staleConfig:
+      enabled: true
+      labels:
+        severity: warning
+    configNotLoaded:
+      enabled: true
+      labels:
+        severity: warning
+    addressPoolExhausted:
+      enabled: true
+      labels:
+        severity: alert
+    addressPoolUsage:
+      enabled: true
+      thresholds:
+        - percent: 75
+          labels:
+            severity: warning
+        - percent: 85
+          labels:
+            severity: warning
+        - percent: 95
+          labels:
+            severity: alert
+    bgpSessionDown:
+      enabled: true
+      labels:
+        severity: alert
+    extraAlerts: []
+controller:
+  enabled: true
+  logLevel: info
+  image:
+    repository: quay.io/metallb/controller
+    tag:
+    pullPolicy:
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    fsGroup: 65534
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  priorityClassName: ""
+  affinity: {}
+  podAnnotations: {}
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+speaker:
+  enabled: true
+  logLevel: info
+  tolerateMaster: true
+  memberlist:
+    enabled: true
+    mlBindPort: 7946
+  image:
+    repository: quay.io/metallb/speaker
+    tag:
+    pullPolicy:
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  priorityClassName: ""
+  affinity: {}
+  podAnnotations: {}
+  livenessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  readinessProbe:
+    enabled: true
+    failureThreshold: 3
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    timeoutSeconds: 1
+  frr:
+    enabled: false
+    logLevel: informational
+    image:
+      repository: quay.io/frrouting/frr
+      tag: stable_7.5
+      pullPolicy:
+
+
+helm install metallb metallb/metallb -f values.yaml -n hbc-common

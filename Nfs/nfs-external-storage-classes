@@ -1,0 +1,55 @@
+#On worker node install nfs-client
+sudo yum install nfs-utils -y
+
+#On master node install nfs-external-provisioner
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner
+helm show values  nfs-subdir-external-provisioner/nfs-subdir-external-provisioner > nfs-value-delete.yaml
+
+vim nfs-value-delete.yaml
+replicaCount: 3
+strategyType: Recreate
+image:
+  repository: k8s.gcr.io/sig-storage/nfs-subdir-external-provisioner
+  tag: v4.0.2
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+nfs:
+  server: srv-dc.systemtest.local
+  path: /delete
+  mountOptions:
+  volumeName: nfs-delete
+  reclaimPolicy: Retain
+storageClass:
+  create: true
+  provisionerName: nfs-delete
+  defaultClass: false
+  name: nfs-delete
+  allowVolumeExpansion: true
+  reclaimPolicy: Delete
+  archiveOnDelete: true
+  onDelete: true
+  pathPattern:
+  accessModes: ReadWriteMany
+  annotations: {}
+leaderElection:
+  enabled: true
+rbac:
+  create: true
+podSecurityPolicy:
+  enabled: false
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+serviceAccount:
+  create: true
+  annotations: {}
+  name:
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+labels: {}
+
+
+
+helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner -n hbc-common -f  nfs-value-delete.yaml
