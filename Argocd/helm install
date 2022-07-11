@@ -1,0 +1,34 @@
+ helm repo add argo https://argoproj.github.io/argo-helm
+
+ kubectl create ns hbc-argocd
+
+ helm install argocd -n hbc-argocd argo/argo-cd
+ vim ingress-argocd.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-ingress
+  namespace: hbc-argocd
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    #inginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+spec:
+  rules:
+  - host: argocd.systemtest.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: argocd-server
+            port:
+              number: 443
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - argocd.systemtest.local
+    secretName: argocd-ssl
+
+kubectl -n hbc-argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d

@@ -1,0 +1,99 @@
+https://medium.com/@manumv1/how-to-rename-a-kubernetes-cluster-c10db35d92aa
+[root@srv-master1 argocd]# kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://kube-apiserver.systemtest.local:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: REDACTED
+    client-key-data: REDACTED
+
+
+[root@srv-master1 argocd]# kubectl edit configmaps kubeadm-config -n kube-system
+configmap/kubeadm-config edited
+
+apiVersion: v1
+data:
+  ClusterConfiguration: |
+    apiServer:
+      extraArgs:
+        authorization-mode: Node,RBAC
+      timeoutForControlPlane: 4m0s
+    apiVersion: kubeadm.k8s.io/v1beta3
+    certificatesDir: /etc/kubernetes/pki
+    clusterName: k8s-hbc
+    controlPlaneEndpoint: kube-apiserver.systemtest.local:6443
+    controllerManager: {}
+    dns: {}
+    etcd:
+      local:
+        dataDir: /var/lib/etcd
+    imageRepository: k8s.gcr.io
+    kind: ClusterConfiguration
+    kubernetesVersion: v1.23.8
+    networking:
+      dnsDomain: cluster.local
+      podSubnet: 10.2.0.0/16
+      serviceSubnet: 10.1.0.0/16
+    scheduler: {}
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2022-07-02T03:56:13Z"
+  name: kubeadm-config
+  namespace: kube-system
+  resourceVersion: "204430"
+  uid: 5ff22d96-4c57-4bc3-84f2-8fd9bb722183
+
+
+
+[root@srv-master1 argocd]# vim  ~/.kube/config
+apiVersion: v1
+clusters:
+- cluster:
+    server: https://kube-apiserver.systemtest.local:6443
+  name: k8s-hbc
+contexts:
+- context:
+    cluster: k8s-hbc
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: kubernetes-admin
+  user:
+
+
+[root@srv-master1 argocd]# kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://kube-apiserver.systemtest.local:6443
+  name: k8s-hbc
+contexts:
+- context:
+    cluster: k8s-hbc
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: REDACTED
+    client-key-data: REDACTED

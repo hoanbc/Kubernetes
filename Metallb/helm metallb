@@ -1,3 +1,4 @@
+##When using the L2 operating mode, traffic on port 7946 (TCP & UDP, other port can be configured) must be allowed between nodes, as required by memberlist.
 helm show values metallb/metallb   > values.yaml
 
 imagePullSecrets: []
@@ -6,7 +7,7 @@ fullnameOverride: ""
 existingConfigMap: ""
 configInline:
   address-pools:
-    - name: default
+    - name: production
       protocol: layer2
       addresses:
         - 192.168.1.231-192.168.1.239
