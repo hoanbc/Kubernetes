@@ -1,3 +1,11 @@
+ETCD_RELEASE=$(curl -s https://api.github.com/repos/etcd-io/etcd/releases/latest|grep tag_name | cut -d '"' -f 4)
+wget https://github.com/etcd-io/etcd/releases/download/${ETCD_RELEASE}/etcd-${ETCD_RELEASE}-linux-amd64.tar.gz
+tar xvf etcd-${ETCD_RELEASE}-linux-amd64.tar.gz
+cd etcd-${ETCD_RELEASE}-linux-amd64
+sudo mv etcdctl /usr/local/bin
+etcdctl version
+
+
 1) Hướng dẫn backup file yaml
 kubectl get all --all-namespaces -o yaml > /tmp/backupnamespaces.yaml
 
@@ -5,7 +13,8 @@ kubectl get all --all-namespaces -o yaml > /tmp/backupnamespaces.yaml
 kubectl apply -f /tmp/backupnamespaces.yaml
 
 3) Hướng dẫn backup database etcd
-ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/ssl/etcd/ca.crt --cert=/etc/kubernetes/ssl/etcd/server.crt --key=/etc/kubernetes/ssl/etcd/server.key /backup/etcd.db
+ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --endpoints ="https://localhost:2379"  /backup/etcd.db
+
 ETCDCTL_API=3 etcdctl snapshot status /backup/etcd.db
 
 4) Hướng dẫn restore database etcd
