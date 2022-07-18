@@ -13,12 +13,14 @@ kubectl get all --all-namespaces -o yaml > /tmp/backupnamespaces.yaml
 kubectl apply -f /tmp/backupnamespaces.yaml
 
 3) Hướng dẫn backup database etcd
-ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --endpoints ="https://localhost:2379"  /backup/etcd.db
+ETCDCTL_API=3 etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --  /backup/etcd.db
 
-ETCDCTL_API=3 etcdctl snapshot status /backup/etcd.db
+ETCDCTL_API=3 etcdctl snapshot status /backup/etcd.db --write-out=table
 
 4) Hướng dẫn restore database etcd
 Chạy lệnh: ETCDCTL_API=3 etcdctl snapshot restore /backup/etcd.db --data-dir=/var/lib/etcdnew
+
+ETCDCTL_API=3 etcdctl snapshot restore snapshot.db --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key --name=kubeadm-master --data-dir=/var/lib/etcd --initial-cluster=kubeadmmaster=https://10.0.0.4:2380 --initial-cluster-token=etcd-cluster-1 --initial-advertise-peerurls=https://10.0.0.4:2380
 
 Vào /etc/kubernetes/manifests/etcd.yaml và sửa các dòng sau:
 từ
