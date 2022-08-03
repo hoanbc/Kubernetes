@@ -39,3 +39,17 @@ mv etcd.yaml ..
 mv ../etcd.yaml .
 
 đợi cho dịch vụ download lại dịch vụ tại /var/lib/etcdfrombackup
+
+
+[root@srv-master1 backup]# cat backupk8s.sh
+#!/bin/bash
+###Veriable
+TIMEBK=$(date +%m-%d-%Y-%T)
+ETCDCTL_API=3
+
+###Run backup etcd
+etcdctl snapshot save --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key  /backup/etcd/$TIMEBK-etcd.db
+
+###Delete old file
+find /backup/etcd/ -name "*etcd.db" -type f -mtime +7 -delete
+
