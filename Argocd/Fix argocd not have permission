@@ -1,0 +1,22 @@
+###ERROR:
+hoanbc@cloudshell:argocd (ap-singapore-1)$ ./argocd cluster list
+WARN[0000] Failed to invoke grpc call. Use flag --grpc-web in grpc calls. To avoid this warning message, use flag --grpc-web. 
+SERVER                          NAME           VERSION  STATUS      MESSAGE                                                                                                                                                                                                                                               PROJECT                                                                                                                                                                                                                                              
+https://kubernetes.default.svc  in-cluster     1.24     Failed      failed to sync cluster https://10.2.0.1:443: failed to load initial state of resource Pod: pods is forbidden: User "system:serviceaccount:hbc-argocd:argocd-application-controller" cannot list resource "pods" in API group "" at the cluster scope  
+
+
+###FIX:
+RBAC -> ClusterRoleBinding -> argocd-application-controller -> 
+subjects:
+- kind: ServiceAccount
+  name: argocd-application-controller
+  namespace: hbc-argocd  ###Verify that namespace deploy argocd is true
+  
+  -> Save
+
+
+hoanbc@cloudshell:argocd (ap-singapore-1)$ ./argocd cluster list
+WARN[0000] Failed to invoke grpc call. Use flag --grpc-web in grpc calls. To avoid this warning message, use flag --grpc-web. 
+SERVER                          NAME           VERSION  STATUS      MESSAGE  PROJECT
+https://kubernetes.default.svc  in-cluster     1.24     Successful           
+       
