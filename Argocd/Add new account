@@ -1,0 +1,18 @@
+###Create new user
+Core -> ConfigMaps -> argocd-cm -> 
+  data:
+    accounts.lfvnuser: apiKey,login
+ 
+-> Ok
+
+###Set permision
+Core -> ConfigMaps -> argocd-rbac-cm -> 
+  date:
+    policy.default: role:readonly
+    policy.csv: |
+     p, role:admin-role, clusters, create, *, allow
+     g, lfvnuser, role:admin-role
+
+
+###Check permision
+argocd account can-i create clusters '*'
