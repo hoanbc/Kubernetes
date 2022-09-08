@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nginx-dev-tls
+spec:
+  secretName: nginx-dev-tls
+  issuerRef:
+    name: acme-issuer
+    kind: ClusterIssuer
+  commonName: nginxdev.testvn.click
+  dnsNames:
+  - nginxdev.testvn.click
