@@ -92,7 +92,7 @@ deploymentStrategy:
   type: Recreate
 
 ###Deploy helm
-helm upgrade --install external-dns external-dns/external-dns -f values.yaml -n hbc-external-dns
+helm --install external-dns external-dns/external-dns -f values.yaml -n hbc-external-dns
 
 
 ###Deploy ingress
