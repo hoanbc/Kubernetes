@@ -1,9 +1,14 @@
- helm repo add argo https://argoproj.github.io/argo-helm
+###Install repo helm
+helm repo add argo https://argoproj.github.io/argo-helm
 
- kubectl create ns hbc-argocd
+###Create namespaces
+kubectl create ns hbc-argocd
 
- helm install argocd -n hbc-argocd argo/argo-cd
- vim ingress-argocd.yaml
+###Deploy helm
+helm install argocd -n hbc-argocd argo/argo-cd
+
+###Deploy ingress
+vim ingress-argocd.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
