@@ -2,18 +2,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: nginx-test
-  name: nginx-test
-  namespace: nginx-test
+    app: nginx-dev
+  name: nginx-dev
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-test
+      app: nginx-dev
   template:
     metadata:
       labels:
-        app: nginx-test
+        app: nginx-dev
     spec:
       containers:
       - image: nginx
