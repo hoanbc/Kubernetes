@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: testvn.click
+    external-dns.alpha.kubernetes.io/ttl: "120"
+    kubernetes.io/ingress.class: nginx
+  name: nginxdev-ingress
+spec:
+  rules:
+  - host: nginxdev.testvn.click
+    http:
+      paths:
+      - backend:
+          service:
+            name: nginx
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - nginxdev.testvn.click
+    secretName: nginxdev-tls
