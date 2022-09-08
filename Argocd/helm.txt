@@ -7,6 +7,22 @@ kubectl create ns hbc-argocd
 ###Deploy helm
 helm install argocd -n hbc-argocd argo/argo-cd
 
+###Deploy cert
+at cert.yaml 
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-tls
+  namespace: hbc-argocd
+spec:
+  secretName: argocd-tls
+  issuerRef:
+    name: acme-issuer
+    kind: ClusterIssuer
+  commonName: argocd.testvn.click
+  dnsNames:
+  - argocd.testvn.click
+  
 ###Deploy ingress
 vim ingress-argocd.yaml
 apiVersion: networking.k8s.io/v1
@@ -35,7 +51,7 @@ spec:
   tls:
   - hosts:
     - argocd.systemtest.local
-    secretName: argocd-ssl
+    secretName: argocd-tls
 
 kubectl -n hbc-argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 
