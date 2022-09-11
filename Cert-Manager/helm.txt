@@ -232,7 +232,7 @@ kubectl apply -f ingress.yaml
 
 
 
-###Use cloudflare
+###Use cloudflare api-key
 vim secret-cloudflare.yml 
 apiVersion: v1
 kind: Secret
@@ -282,3 +282,54 @@ spec:
   - nginx1.testvn.click
 
 kubectl apply -f cert.yaml 
+
+
+
+###Use cloudflare api-token
+vim api-token.yaml 
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-api-token-secret
+  namespace: hbc-cert-manager
+type: Opaque
+stringData:
+  api-token: Xx7n1VKd-h1QUrf11111gckZ8ew6qaidJdl0dTh
+
+vim clusterissuer-acme-apitoken.yml 
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: acme-issuer
+  namespace: hbc-cert-manager
+spec:
+  acme:
+    email: hoanbc@outlook.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-issuer-account-key
+    solvers:
+    - dns01:
+        cloudflare:
+          email: hoanbc@outlook.com
+          apiTokenSecretRef:
+            name: cloudflare-api-token-secret
+            key: api-token 
+ 
+vim requestcert.yaml      
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: testvn-click-tls
+  namespace: hbc-cert-manager
+spec:
+  secretName: testvn-click-tls
+  secretTemplate:
+    annotations:
+      kubed.appscode.com/sync: "cert-manager-tls=testvn-click"
+  issuerRef:
+    name: acme-issuer
+    kind: ClusterIssuer
+  #commonName: '*.testvn.click'
+  dnsNames:
+  - '*.testvn.click'
