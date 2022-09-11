@@ -21,4 +21,4 @@ spec:
   tls:
   - hosts:
     - nginxdev.testvn.click
-    secretName: nginxdev-tls
+    secretName: testvn-click-tls
