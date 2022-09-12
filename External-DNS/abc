@@ -1,0 +1,310 @@
+[PARSER]
+Name ingress-nginx-access
+Format regex
+Regex ^(?<client_ip>[^\\s]*)\\s-\\s(?<remote_user>[^\\s]*)\\s\\[(?<local_time>[^\\]]*)\\]\\s\\\"(?<http_method>[^\\s]*)\\s(?<request_url>[^\\s]*)\\s(?<http_version>[^\\\"]*)\\\"\\s(?<status>[^\\s]*)\\s(?<body_bytes_sent>[^\\s]*)\\s\\\"(?<http_referer>[^\\\"]*)\\\"\\s\\\"(?<user_agent>[^\\\"]*)\\\"\\s(?<request_length>[^\\s]*)\\s(?<request_time>[^\\s]*)\\s\\[(?<proxy_upstream_name>[^\\]]*)\\]\\s\\[(?<proxy_alternative_upstream_name>[^\\]]*)\\]\\s(?<upstream_addr>[^\\s]*)\\s(?<upstream_response_length>[^\\s]*)\\s(?<upstream_response_time>[^\\s]*)\\s(?<upstream_status>[^\\s]*)\\s(?<req_id>.*)$
+Time_Key local_time
+Time_Format %d/%b/%Y:%H:%M:%S %z
+Types status:integer body_bytes_sent:integer request_length:integer request_time:float upstream_response_length:integer upstream_response_time:float upstream_status:integer\n",
+ 
+ 
+[SERVICE]
+Daemon Off
+Flush 1
+Log_Level info
+Parsers_File parsers.conf
+Parsers_File custom_parsers.conf
+HTTP_Server On
+HTTP_Listen 0.0.0.0
+HTTP_Port 2020
+Health_Check On
+storage.path /tmp
+storage.sync normal
+storage.checksum on
+storage.max_chunks_up 96
+storage.backlog.mem_limit 5M
+
+[INPUT]
+Name tail
+Buffer_Chunk_Size 32K
+Path /var/log/containers/*nginx*.log\n
+Mem_Buf_Limit 5MB
+Skip_Long_Lines On
+DB /tmp/nginx_log.db
+DB.locking true
+Tag hbc-corp.prod.nginx
+Parser ingress-nginx-access
+Read_from_Head true
+
+[INPUT]
+Name tail
+Buffer_Chunk_Size 32K\n#     Path /var/log/containers/*admin-portal*.log\n#     Mem_Buf_Limit 5MB\n#     Skip_Long_Lines On\n
+#     DB /tmp/admin-portal_log.db\n#     DB.locking true\n#     Tag hbc-corp.prod.admin-portal\n#     Read_from_Head true\n\n# [INPUT]\n#     Name tail\n
+#     Buffer_Chunk_Size 32K\n#     Path /var/log/containers/*fpt-service*.log\n#     Mem_Buf_Limit 5MB\n#     Skip_Long_Lines On\n#     DB /tmp/fpt-service.db\n
+#     DB.locking true\n#     Tag hbc-corp.prod.fpt-service\n#     Read_from_Head true\n\n# [INPUT]\n#     Name tail\n#     Buffer_Chunk_Size 32K\n
+#     Path /var/log/containers/*merchant-portal*.log\n#     Mem_Buf_Limit 5MB\n#     Skip_Long_Lines On\n
+#     DB /tmp/merchant-portal.db\n#     DB.locking true\n#     Tag hbc-corp.prod.merchant-portal\n#     Read_from_Head true\n\n# [INPUT]\n
+#     Name tail\n#     Buffer_Chunk_Size 32K\n#     Path /var/log/containers/*web-api*.log\n#     Mem_Buf_Limit 5MB\n
+#     Skip_Long_Lines On\n#     DB /tmp/web-api.db\n#     DB.locking true\n#     Tag hbc-corp.prod.web-api\n#     Read_from_Head true\n\n
+[INPUT]\n    
+Name tail\n    
+Path /var/log/containers/*nginx*.log, /var/log/containers/*admin-portal*.log, /var/log/containers/*fpt-service*.log, /var/log/containers/*merchant-portal*.log, /var/log/containers/*web-api*.log\n    
+# Path /var/log/containers/*nginx*.log, /var/log/containers/*admin-portal*.log, /var/log/containers/*merchant-portal*.log, /var/log/containers/*web-api*.log \n    
+Read_from_Head    True\n    
+multiline.parser docker, cri\n    
+Tag kube.*\n    
+Mem_Buf_Limit 5MB\n    
+Skip_Long_Lines On\n    
+DB /tmp/fluentbit-kube.db\n    
+DB.locking true\n    
+Refresh_Interval  10\n\n\n# 
+
+[INPUT]\n
+#     Name systemd\n
+#     Tag host.*\n
+#     Systemd_Filter _SYSTEMD_UNIT=kubelet.service\n
+#     Read_From_Tail On\n\n[FILTER]\n    Name kubernetes\n    Match kube.*\n    
+# Merge_Log Off\n    Keep_Log Off\n    K8S-Logging.Parser On\n    K8S-Logging.Exclude On\n\n
+# [FILTER]\n#     Name nest\n
+#     Match *\n#     Operation nest\n
+#     Wildcard kubernetes_*\n
+#     Nest_under kubernetes\n
+#     Remove_prefix kubernetes_\n\n
+# [FILTER]\n
+#     Name                lua\n
+#     Match               *\n
+#     Script              scripts.lua\n
+#     Call                append_tag\n\n
+# [OUTPUT]\n
+#     Name            es\n
+#     Match           *\n
+#     Host            vpc-lfvn-prod-logging-os-enp3qfxl63bc5bfrwwtuhln4su.ap-southeast-1.es.amazonaws.com\n
+#     Port            443\n
+#     HTTP_User       ${OPENSEARCH_USERNAME}\n
+#     HTTP_Passwd     ${OPENSEARCH_PASSWORD}\n
+#     Logstash_Format On\n
+#     Logstash_Prefix_Key tag\n
+#     Logstash_DateFormat %Y.%m\n
+#     tls             On\n
+#     tls.verify      Off\n\n
+
+[OUTPUT]\n    
+Name stdout\n    
+Match *\n\n
+
+[OUTPUT]\n    
+Name forward\n   
+Match *\n    
+Host log-aggregator-fluent-bit.logging\n    
+Port 24224\n    net.keepalive off\n    \n",
+ 
+
+
+
+[PARSER]\n
+Name hbc-corp-app-type1\n
+Format regex\n
+Regex (?<level>[^ ]*)\\s\\[(?<prog>[^ ]*)\\]\\s(?<func>[^ ]*)\\s(?<msg>.*)\n
+Time_Key local_time\n
+# Time_Key    logtime\n
+Time_Format %d-%b-%Y %H:%M:%S.%L\n\n[PARSER]\n
+Name hbc-corp-app-type2\n
+Format regex\n
+Regex \\|(?<level>.*)\\|(?<func>.*)\\|(?<msg>.*)\n
+Time_Key local_time\n
+# Time_Key
+logtime\n
+Time_Format %H:%M:%S,%L\n\n# [MULTILINE_PARSER]\n#
+name hbc-corp-app-type2\n#
+type regex\n#
+flush_timeout 5000\n#
+rule \"start_state\" \"\\|(?<level>.*)\\|(?<func>.*)\\|(?<msg>.*)\" \"cont_trace\"\n#
+rule \"cont_trace\" \"/(?<msg>.*)/\" \"cont_trace\"\n\n[PARSER]\n
+Name ingress-nginx-access\n
+Format regex\n
+Regex ^(?<client_ip>[^\\s]*)\\s-\\s(?<remote_user>[^\\s]*)\\s\\[(?<local_time>[^\\]]*)\\]\\s\\\"(?<http_method>[^\\s]*)\\s(?<request_url>[^\\s]*)\\s(?<http_version>[^\\\"]*)\\\"\\s(?<status>[^\\s]*)\\s(?<body_bytes_sent>[^\\s]*)\\s\\\"(?<http_referer>[^\\\"]*)\\\"\\s\\\"(?<user_agent>[^\\\"]*)\\\"\\s(?<request_length>[^\\s]*)\\s(?<request_time>[^\\s]*)\\s\\[(?<proxy_upstream_name>[^\\]]*)\\]\\s\\[(?<proxy_alternative_upstream_name>[^\\]]*)\\]\\s(?<upstream_addr>[^\\s]*)\\s(?<upstream_response_length>[^\\s]*)\\s(?<upstream_response_time>[^\\s]*)\\s(?<upstream_status>[^\\s]*)\\s(?<req_id>.*)$\n
+Time_Key local_time\n
+Time_Format %d/%b/%Y:%H:%M:%S %z\n
+Types status:integer body_bytes_sent:integer request_length:integer request_time:float upstream_response_length:integer upstream_response_time:float upstream_status:integer\n",
+
+
+
+
+
+[SERVICE]\n
+Daemon Off\n
+Flush 1\n
+Log_Level debug\n
+Parsers_File parsers.conf\n
+Parsers_File custom_parsers.conf\n
+HTTP_Server On\n
+HTTP_Listen 0.0.0.0\n
+HTTP_Port 2020\n
+Health_Check On\n
+storage.path /var/log/flb-storage/\n
+storage.sync normal\n
+storage.checksum on\n
+storage.max_chunks_up 128\n
+storage.backlog.mem_limit 5M\n\n
+
+[INPUT]\n
+Name forward\n
+Listen 0.0.0.0\n
+Port 24224\n
+storage.type filesystem\n
+Mem_Buf_Limit 45M\n
+Buffer_Chunk_Size 32K\n\n
+
+####################################################################################\n
+# Add app_name and component_name log records\n
+# Remove unnecessary fields\n
+####################################################################################\n
+## lift the keys up, so that we can copy it\n
+
+[FILTER]\n
+Name nest\n
+Match kube.*\n
+Operation lift\n
+Nested_under kubernetes\n
+Add_prefix kubernetes_\n\n
+
+[FILTER]\n
+Name nest\n
+Match kube.*\n
+Operation lift\n
+Nested_under kubernetes_labels\n
+Add_prefix kubernetes_labels_\n\n
+
+## copy the existing key to another key with different name\n
+## Remove unnecessary keys\n
+
+[FILTER]\n
+Name modify\n
+Match kube.*\n
+Copy kubernetes_labels_app.kubernetes.io/name app_name\n
+Copy kubernetes_labels_app.kubernetes.io/component component_name\n
+Remove kubernetes_docker_id\n
+Remove kubernetes_container_hash\n
+Remove kubernetes_labels_pod-template-hash\n\n
+
+## nest the lifted keys\n[FILTER]\n
+Name nest\n
+Match kube.*\n
+Operation nest\n
+Wildcard kubernetes_labels_*\n
+Nest_under kubernetes_labels\n
+Remove_prefix kubernetes_labels_\n\n
+
+[FILTER]\n
+Name nest\n
+Match kube.*\n
+Operation nest\n
+Wildcard kubernetes_*\n
+Nest_under kubernetes\n
+Remove_prefix kubernetes_\n\n
+
+####################################################################################\n
+# Change tag for log records came from sidecar fluentbit\n
+####################################################################################\n
+
+# [FILTER]\n
+#     Name rewrite_tag\n
+#     Match origin.*.*\n
+#     Emitter_Storage.type filesystem\n
+#     Emitter_Mem_Buf_Limit 10M\n
+#     Rule $app_name ^hbc-corp-(.*)$ hbc-corp.prod.$1.$TAG[1].$TAG[2] false\n\n
+# [FILTER]\n
+#     Name rewrite_tag\n
+#     Match origin.*\n
+#     Emitter_Storage.type filesystem\n
+#     Emitter_Mem_Buf_Limit 10M\n
+#     Rule $app_name ^hbc-corp-(.*)$ hbc-corp.prod.$1.$TAG[1] false\n\n
+
+[FILTER]\n
+Name rewrite_tag\n
+Match kube.*\n
+Emitter_Storage.type filesystem\n
+Emitter_Mem_Buf_Limit 10M\n
+Rule $app_name .*ingress-nginx* hbc-corp.prod.ingress-nginx false\n
+Rule $app_name .*admin-portal* hbc-corp.prod.admin-portal false\n
+Rule $app_name .*fpt-service* hbc-corp.prod.fpt-service false\n
+Rule $app_name .*merchant-portal* hbc-corp.prod.merchant-portal false\n
+Rule $app_name .*web-api* hbc-corp.prod.web-api false\n
+
+####################################################################################\n
+# Parse log\n
+####################################################################################\n\n
+
+[FILTER]\n
+Name parser\n
+Match hbc-corp.prod.ingress-nginx\n
+Key_Name log\n
+Parser ingress-nginx-access\n
+Reserve_Data true\n\n[FILTER]\n
+Name parser\n
+Match hbc-corp.prod.admin-portal\n
+Key_Name log\n
+Parser hbc-corp-app-type1\n
+Reserve_Data true\n\n
+
+[FILTER]\n
+Name parser\n
+Match hbc-corp.prod.fpt-service\n
+Key_Name log\n
+Parser hbc-corp-app-type2\n
+Reserve_Data true\n\n[FILTER]\n
+Name parser\n
+Match hbc-corp.prod.merchant-portal\n
+Key_Name log\n
+Parser hbc-corp-app-type1\n
+Reserve_Data true\n\n[FILTER]\n
+Name parser\n
+Match hbc-corp.prod.web-api\n
+Key_Name log\n
+Parser hbc-corp-app-type1\n
+Reserve_Data true\n\n
+
+####################################################################################\n
+# Rename log field for laravel log\n
+####################################################################################\n
+[FILTER]\n
+Name modify\n
+Match hbc-corp.prod.*.laravel\n
+Rename log message\n\n
+
+####################################################################################\n
+# Because the timestamp in the phpfpm error log and laravel log do not contain timezone information,\n
+# fluentbit will understand it as UTC (but it's GMT+7 actually).\n
+# So we need to convert the timestamp to UTC so that fluentbit can understand it correctly.
+####################################################################################\n
+
+[FILTER]\n
+Name                lua\n
+Match               *\n
+Script              scripts.lua\n
+Call                replace_ansi\n\n####################################################################################\n
+# Add tag value to the record with new key, so that we can use that key to create\n
+# indices in elasticsearch\n####################################################################################\n
+[FILTER]\n
+Name                lua\n
+Match               *\n
+Script              scripts.lua\n
+Call                append_tag\n\n
+
+[OUTPUT]\n
+Name stdout\n
+Match *\n\n
+
+[OUTPUT]\n
+Name            es\n
+Match           *\n
+Host            vpc-lfvn-prod-logging-os-enp3qfxl63bc5bfrwwtuhln4su.ap-southeast-1.es.amazonaws.com\n
+Port            443\n
+HTTP_User       ${OPENSEARCH_USERNAME}\n
+HTTP_Passwd     ${OPENSEARCH_PASSWORD}\n
+Logstash_Format On\n
+Logstash_Prefix_Key tag\n
+Logstash_DateFormat %Y.%m\n
+tls             On\n
+tls.verify      Off\n",
+
+
