@@ -10,6 +10,8 @@ vim value.yaml
 image:
   repository: k8s.gcr.io/external-dns/external-dns
   tag: ""
+  #repository: gcr.io/k8s-staging-external-dns/external-dns
+  #tag: "v20220802-v0.12.2-7-ge2b86a11"
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 nameOverride: ""
@@ -88,6 +90,10 @@ domainFilters:
   - testvn.click
 provider: cloudflare
 extraArgs: []
+#OCI OKE
+#extraArgs:
+#  -  --exclude-target-net=10.1.251.0/24
+  
 deploymentStrategy:
   type: Recreate
 
@@ -102,7 +108,7 @@ kind: Ingress
 metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: testvn.click
-    external-dns.alpha.kubernetes.io/ttl: "120"
+    external-dns.alpha.kubernetes.io/ttl: "3600"
     kubernetes.io/ingress.class: nginx
   name: nginx-ingress
   namespace: nginx-test
