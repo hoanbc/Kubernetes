@@ -12,6 +12,34 @@ Type: Global Analysis Token
 Expires in: DD/MM/YY
 -> Generate (*2)
 
+###Gitlab project Tokens
+Project -> Settings -> Repository -> Deploy tokens ->
+Name: scan-code-project-token
+Scope: read_repository | read_registry
+-> Create deploy token -> Copy username:gitlab+deploy-token-xxx (*3) -> Copy token: xxxx (*4)
+
+###Gitlab project webhook
+Project -> Settings -> Webhooks -> URL: https://admin:11aa63e53dd63f2ff1e175a44f8ab519de@jenkins.testvn.click/project/scan-code
+Secret token: 
+Trigger: Push events
+
+###Gitlab file
+- sonar-project.properties (###Project -> Project name:scan-code -> Project Information -> Project Key)
+sonar.projectKey=hoanbc_scan-code_AYOEcX8iMs2jfFEdPxnB -> 
+
+- Jenkinsfile
+node {
+  stage('SCM') {
+    checkout scm
+  }
+  stage('SonarQube Analysis') {
+    def scannerHome = tool 'sonarqubescanner';
+    withSonarQubeEnv() {
+      sh "${scannerHome}/bin/sonar-scanner"
+    }
+  }
+}
+
 
 ###DevOps Platform Integrations in SonarQube
 SonarQube -> Administrator -> Configuration -> DevOps Platform Integrations -> Gitlab ->
@@ -38,10 +66,25 @@ SonarQube servers:
  - Credentials: Add -> Kind: Gitlab API token -> API token: gitlab-tokens (*1) -> Add 
  -> Save
  
- ###Jenkins setting basic Global Tool Configuration
+###Jenkins setting basic Global Tool Configuration
  SonarQube Scanner
  - SonarQube Scanner installations
     - SonarQubeScanner Name: sonarqubescanner (*3) -> Install automatically -> Install from Maven Central -> SonarQube Scanner -> Save
     
- ###Jenkins build job
+###Jenkins build job
 Dashboad -> New item -> Name: scan-code -> Pipeline -> Ok
+- Build Triggers: Build when a change is pushed to GitLab. GitLab webhook URL: https://jenkins.testvn.click/project/scan-code
+    - Push Events
+    - Opened Merge Request Events
+- Pipeline
+  Definition: Pipeline script from SCM
+  SCM: Git
+  Repositories: 
+    - Repository URL: https://gitlab.com/hoanbc/scan-code.git
+    - Credentials: Add -> Kind: Username with password -> Username (*3) -> Password (*4) -> Add
+- Script Path
+  Jenkinsfile
+  
+
+  
+  
