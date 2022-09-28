@@ -1,0 +1,47 @@
+###Gitlab Tokens
+Account -> User Settings -> Access Tokens -> 
+Token name: gitlab-tokens
+Expiration date: DD-MM-YY
+Select scopes: api
+-> Create personal access token -> Save token(*1)
+
+###SonarQube Tokens
+My Account -> Security -> Generate Tokens
+Name: sonarqube-tokens
+Type: Global Analysis Token
+Expires in: DD/MM/YY
+-> Generate (*2)
+
+
+###DevOps Platform Integrations in SonarQube
+SonarQube -> Administrator -> Configuration -> DevOps Platform Integrations -> Gitlab ->
+Configuration name: Gitlab
+GitLab API URL: https://gitlab.com/api/v4
+Personal Access Token: gitlab-tokens(*1)
+-> Save configuration
+
+###Install plugin on Jenkins
+Jenkins -> Manage Jenkins -> Manage Plugins -> Available -> GitLab Plugin | SonarQube Scanner for Jenkins -> Download now and install after restart
+
+###Jenkins setting basic Configure System
+Jenkins Location:
+- Jenkins URL: https://jenkins.testvn.click/
+- System Admin e-mail address: devops@testvn.click
+SonarQube servers:
+- SonarQube installations
+  - Name: sonarqube
+  - Server URL: https://sonar.testvn.click/
+  - Server authentication token: Add -> Secret text -> sonarqube-tokens(*2)
+ Gitlab:
+ - Connection name: Gitlab
+ - Gitlab host URL: https://gitlab.com
+ - Credentials: Add -> Kind: Gitlab API token -> API token: gitlab-tokens (*1) -> Add 
+ -> Save
+ 
+ ###Jenkins setting basic Global Tool Configuration
+ SonarQube Scanner
+ - SonarQube Scanner installations
+    - SonarQubeScanner Name: sonarqubescanner (*3) -> Install automatically -> Install from Maven Central -> SonarQube Scanner -> Save
+    
+ ###Jenkins build job
+Dashboad -> New item -> Name: scan-code -> Pipeline -> Ok
