@@ -18,14 +18,20 @@ Name: scan-code-project-token
 Scope: read_repository | read_registry
 -> Create deploy token -> Copy username:gitlab+deploy-token-xxx (*3) -> Copy token: xxxx (*4)
 
+###Jenkins token
+Jenkins Admin -> Configure -> API Token -> Current token(s) -> Add new tokens -> Name: gitlab-webhook -> Generate -Save jenkins-token(*5)
+
 ###Gitlab project webhook
-Project -> Settings -> Webhooks -> URL: https://admin:11aa63e53dd63f2ff1e175a44f8ab519de@jenkins.testvn.click/project/scan-code
+Project -> Settings -> Webhooks -> URL: https://admin:jenkins-token(*5)@jenkins.testvn.click/project/scan-code
 Secret token: 
 Trigger: Push events
 
+###SonarQube project token
+SonarQube -> Project -> Project name:scan-code -> Project Information -> Project Key -> hoanbc_scan-code_XXX(*6)
+
 ###Gitlab file
-- sonar-project.properties (###Project -> Project name:scan-code -> Project Information -> Project Key)
-sonar.projectKey=hoanbc_scan-code_AYOEcX8iMs2jfFEdPxnB -> 
+- sonar-project.properties
+sonar.projectKey=hoanbc_scan-code_XXX(*6)
 
 - Jenkinsfile
 node {
@@ -33,13 +39,12 @@ node {
     checkout scm
   }
   stage('SonarQube Analysis') {
-    def scannerHome = tool 'sonarqubescanner';
+    def scannerHome = tool 'sonarqubescanner(*7)';
     withSonarQubeEnv() {
       sh "${scannerHome}/bin/sonar-scanner"
     }
   }
 }
-
 
 ###DevOps Platform Integrations in SonarQube
 SonarQube -> Administrator -> Configuration -> DevOps Platform Integrations -> Gitlab ->
@@ -69,7 +74,7 @@ SonarQube servers:
 ###Jenkins setting basic Global Tool Configuration
  SonarQube Scanner
  - SonarQube Scanner installations
-    - SonarQubeScanner Name: sonarqubescanner (*3) -> Install automatically -> Install from Maven Central -> SonarQube Scanner -> Save
+    - SonarQubeScanner Name: sonarqubescanner(*7 -> Install automatically -> Install from Maven Central -> SonarQube Scanner -> Save
     
 ###Jenkins build job
 Dashboad -> New item -> Name: scan-code -> Pipeline -> Ok
