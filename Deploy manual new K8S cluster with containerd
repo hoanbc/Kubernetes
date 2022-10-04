@@ -1,6 +1,6 @@
 ###Deploy manual new K8S cluster with containerd
 
-#Copy root ca to /etc/kubernetes/pki
+#Copy root ca to /etc/kubernetes/pki ( rename to ca.crt and ca.key )
 Case: Deploy K8S cluster with kubeadm use containerd as container runtimes. Haproxy load port 6443 for Kubernetes control plane.
 
 Topology:
