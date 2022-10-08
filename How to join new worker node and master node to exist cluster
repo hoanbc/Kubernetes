@@ -12,6 +12,7 @@ openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt \
 example: b7dd8b7264efb06d244421b48748922472c8843d5475db96b95d56e740aa4d7c
 
 Step 2 - Retrieve bootstrap Tokens:
+kubeadm token create
 kubeadm token list
 
 example: rv806s.x16p81pppxn1hlvq
