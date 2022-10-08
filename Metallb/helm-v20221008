@@ -1,0 +1,47 @@
+###Create namespace
+kubectl create ns hbc-metallb
+
+###Edit strictARP
+kubectl edit configmap -n kube-system kube-proxy
+  apiVersion: kubeproxy.config.k8s.io/v1alpha1
+  kind: KubeProxyConfiguration
+  mode: "ipvs"
+  ipvs:
+    strictARP: true
+
+###Install helm
+helm repo add metallb https://metallb.github.io/metallb
+helm install metallb metallb/metallb -f values.yaml -n hbc-common
+
+###Create Pool IP
+vim prod-ip-pools.yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: prod-ip-pools
+  namespace: hbc-metallb
+spec:
+  addresses:
+  - 10.200.12.225-10.200.12.229
+
+kubectl apply -f prod-ip-pools.yaml
+
+###Create rule l2advertisement
+vim l2advertisement.yaml
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: prod-ip-pools-l2advertisement
+  namespace: hbc-metallb
+spec:
+  ipAddressPools:
+  - prod-ip-pools
+  nodeSelectors:
+  - matchLabels:
+      kubernetes.io/hostname: k8s-worker01
+  - matchLabels:
+      kubernetes.io/hostname: k8s-worker02
+  - matchLabels:
+      kubernetes.io/hostname: k8s-worker03
+      
+ kubectl apply -f l2advertisement.yaml
