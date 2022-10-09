@@ -81,7 +81,7 @@ interval: 5m
 triggerLoopOnEvent: false
 sources:
   - ingress
-policy: sync ###be carefuly when use this option, it will remove all old dns did create be external-dns
+policy: sync ###be careful when use this option, it will remove all old dns did create by external-dns
 #policy: upsert-only
 registry: txt
 txtOwnerId: "hbc-corp"
