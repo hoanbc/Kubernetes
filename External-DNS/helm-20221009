@@ -81,7 +81,8 @@ interval: 5m
 triggerLoopOnEvent: false
 sources:
   - ingress
-policy: sync
+policy: sync ###be carefuly when use this option, it will remove all old dns did create be external-dns
+#policy: upsert-only
 registry: txt
 txtOwnerId: "hbc-corp"
 txtPrefix: ""
@@ -110,6 +111,7 @@ metadata:
     external-dns.alpha.kubernetes.io/hostname: testvn.click
     external-dns.alpha.kubernetes.io/ttl: "3600"
     kubernetes.io/ingress.class: nginx
+    #external-dns.alpha.kubernetes.io/target: 192.168.xx.xx ###If use metallb
   name: nginx-ingress
   namespace: nginx-test
 spec:
