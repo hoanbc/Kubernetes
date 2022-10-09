@@ -1,0 +1,196 @@
+###Add helm repo
+helm repo add sonarqube https://SonarSource.github.io/helm-chart-sonarqube
+helm repo update
+helm show value sonarqube/sonarqube > value.yaml
+###Edit repo value
+vim value.yaml
+
+deploymentType: "StatefulSet"
+replicaCount: 1
+deploymentStrategy: {}
+OpenShift:
+  enabled: false
+  createSCC: true
+edition: "community"
+image:
+  repository: sonarqube
+  pullPolicy: IfNotPresent
+securityContext:
+  fsGroup: 1000
+containerSecurityContext:
+  runAsUser: 1000
+elasticsearch:
+  configureNode: true
+  bootstrapChecks: true
+service:
+  type: ClusterIP
+  externalPort: 9000
+  internalPort: 9000
+  labels:
+  annotations: {}
+networkPolicy:
+  enabled: false
+nginx:
+  enabled: false
+ingress:
+  enabled: true
+  hosts:
+    - name: sonarqube.testvn.click
+      path: /
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: testvn.click
+    external-dns.alpha.kubernetes.io/target: 202.130.37.225
+    external-dns.alpha.kubernetes.io/ttl: "3600"
+    kubernetes.io/ingress.class: nginx
+  tls:
+    - secretName: testvn-click-tls
+      hosts:
+        - sonarqube.testvn.click
+route:
+  enabled: false
+  host: ""
+  tls:
+    termination: edge
+  annotations: {}
+affinity: {}
+tolerations: []
+nodeSelector: {}
+hostAliases: []
+readinessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  failureThreshold: 6
+  sonarWebContext: /
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  failureThreshold: 6
+  sonarWebContext: /
+startupProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 24
+  sonarWebContext: /
+initContainers:
+  resources: {}
+extraInitContainers: {}
+extraContainers: []
+caCerts:
+  enabled: false
+  image: adoptopenjdk/openjdk11:alpine
+  secret: your-secret
+initSysctl:
+  enabled: true
+  vmMaxMapCount: 524288
+  fsFileMax: 131072
+  nofile: 131072
+  nproc: 8192
+  securityContext:
+    privileged: true
+initFs:
+  enabled: true
+  securityContext:
+    privileged: true
+prometheusExporter:
+  enabled: true
+  version: "0.16.0"
+  noCheckCertificate: true
+  webBeanPort: 8000
+  ceBeanPort: 8001
+  config:
+    rules:
+      - pattern: ".*"
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+plugins:
+  install: []
+  lib: []
+  noCheckCertificate: false
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+jvmOpts: ""
+jvmCeOpts: ""
+monitoringPasscode: "define_it"
+annotations: {}
+resources:
+  limits:
+    cpu: 800m
+    memory: 4Gi
+  requests:
+    cpu: 400m
+    memory: 2Gi
+persistence:
+  enabled: true
+  annotations: {}
+  storageClass: nfs-external-storage
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  uid: 1000
+  volumes: []
+  mounts: []
+emptyDir: {}
+jdbcOverwrite:
+  enable: false
+  jdbcUrl: "jdbc:postgresql://myPostgress/myDatabase?socketTimeout=1500"
+  jdbcUsername: "sonarUser"
+  jdbcPassword: "sonarPass"
+postgresql:
+  enabled: true
+  postgresqlUsername: "sonarUser"
+  postgresqlPassword: "sonarPass"
+  postgresqlDatabase: "sonarDB"
+  service:
+    port: 5432
+  resources:
+    limits:
+      cpu: 2
+      memory: 2Gi
+    requests:
+      cpu: 100m
+      memory: 200Mi
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 20Gi
+    storageClass: nfs-external-storage
+  securityContext:
+    enabled: true
+    fsGroup: 1001
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+  volumePermissions:
+    enabled: false
+    securityContext:
+      runAsUser: 0
+  shmVolume:
+    chmod:
+      enabled: false
+  serviceAccount:
+    enabled: false
+podLabels: {}
+sonarqubeFolder: /opt/sonarqube
+tests:
+  enabled: true
+  resources: {}
+  initContainers:
+    resources: {}
+serviceAccount:
+  create: false
+  annotations: {}
+extraConfig:
+  secrets: []
+  configmaps: []
+terminationGracePeriodSeconds: 60
+
+###Create namespace
+kubectl create namespace hbc-sonarqube
+
+###Deploy sonarqube
+helm install -n hbc-sonarqube sonarqube sonarqube/sonarqube -f value.yaml
+
+###Access website
+admin / admin
+
