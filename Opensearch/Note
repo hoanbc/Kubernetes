@@ -1,0 +1,15 @@
+# Create a private key for the admin certificate.
+sudo openssl genrsa -out admin-key-temp.pem 2048
+sudo openssl pkcs8 -inform PEM -outform PEM -in admin-key-temp.pem -topk8 -nocrypt -v1 PBE-SHA1-3DES -out admin-key.pem
+sudo openssl req -new -key admin-key.pem -subj "/C=VN/L=Hanoi/O=TESTVN/CN=opensearch.testvn.local" -out admin.csr
+sudo openssl x509 -req -in admin.csr -CA root-testvncrt.pem -CAkey root-testvnkey.pem -CAcreateserial -sha256 -out admin.pem -days 730
+
+
+# Create a private key for the node certificate.
+sudo openssl genrsa -out node1-key-temp.pem 2048
+sudo openssl pkcs8 -inform PEM -outform PEM -in node1-key-temp.pem -topk8 -nocrypt -v1 PBE-SHA1-3DES -out node1-key.pem
+sudo openssl req -new -key node1-key.pem -subj "/C=VN/L=Hanoi/O=TESTVN/CN=opensearch.testvn.local" -out node1.csr
+sudo sh -c 'echo subjectAltName=DNS:opensearch.testvn.local > node1.ext'
+sudo openssl x509 -req -in node1.csr -CA root-testvncrt.pem -CAkey root-testvnkey.pem -CAcreateserial -sha256 -out node1.pem -days 3650 -extfile node1.ext
+
+OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk ./securityadmin.sh -cd /etc/opensearch/opensearch-security/ -cacert /etc/opensearch/root-testvncrt.pem -cert /etc/opensearch/admin.pem -key /etc/opensearch/admin-key.pem -icl -nhnv -h opensearch.testvn.local -p 9200
