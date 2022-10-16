@@ -1,0 +1,139 @@
+###Ingress Gateway SSL
+
+##Deploying a sample Hello World application
+#Create the deployment and service:
+[root@srv-master1 ~]# vim hello-world.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hello-world
+  namespace: hbc-survey
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+  namespace: hbc-survey
+  labels:
+    app: hello-world
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      serviceAccountName: hello-world
+      containers:
+        - image: gcr.io/tetratelabs/hello-world:1.0.0
+          imagePullPolicy: Always
+          name: svc
+          ports:
+            - containerPort: 3000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: hello-world
+  labels:
+    app: hello-world
+spec:
+  selector:
+    app: hello-world
+  ports:
+    - port: 80
+      name: http
+      targetPort: 3000
+
+#Save the above to hello-world.yaml and deploy it using kubectl apply -f hello-world.yaml.
+
+##Deploy a public gateway and a virtual service to expose the Hello world application through the ingress gateway:
+#Deploy ingress gateway
+[root@srv-master1 ~]# vim gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: public-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - '*'
+[root@srv-master1 ~]# kubectl apply -f gateway.yaml
+
+#Deploy virtual service
+[root@srv-master1 ~]# vim vs.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: helloworld
+spec:
+  hosts:
+    - '*'
+  gateways:
+    - public-gateway
+  http:
+    - route:
+      - destination:
+          host: hello-world
+          port:
+            number: 80
+
+[root@srv-master1 ~]# kubectl apply -f vs.yaml      
+
+#Create the secret in the istio-system namespace and reference it from the Gateway resource:
+kubectl create -n istio-system secret tls systemtest-credential --key=systemtest.key --cert=systemtest.crt
+
+#Update the Gateway resource:
+[root@srv-master1 ~]# vim gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: public-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - 'helloworld.systemtest.cf'
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - 'helloworld.systemtest.cf'
+    tls:
+      mode: SIMPLE
+      credentialName: systemtest-credential
+
+#Update the VirtualService resource:
+[root@srv-master1 ~]# vim vs.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: helloworld
+spec:
+  hosts:
+    - hello.systemtest.cf
+  gateways:
+    - public-gateway
+  http:
+    - route:
+      - destination:
+          host: hello-world
+          port:
+            number: 80

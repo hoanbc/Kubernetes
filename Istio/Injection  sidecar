@@ -1,0 +1,2 @@
+###Injection  sidecar
+kubectl label namespace hbc-project istio-injection=enabled

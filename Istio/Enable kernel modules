@@ -1,0 +1,3 @@
+Error: iptables-restore: unable to initialize table 'nat'
+Fix: Run on all master and worker node
+ modprobe br_netfilter ; modprobe nf_nat ; modprobe xt_REDIRECT ; modprobe xt_owner; modprobe iptable_nat; modprobe iptable_mangle; modprobe iptable_filter

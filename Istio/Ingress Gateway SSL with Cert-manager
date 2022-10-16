@@ -1,0 +1,92 @@
+###Using cert-manager
+#Installing the cert-manager first:
+[root@srv-master1 ~]# kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+
+#Create the issuer
+[root@srv-master1 ~]# vim issuer.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-prod
+  namespace: istio-system
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory 
+    email: [hoanbc@outlook.com]
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - selector: {}
+      http01:
+        ingress:
+          class: istio
+
+[root@srv-master1 ~]# kubectl apply -f issuer.yaml
+
+#Create the certificate and get it issued:
+[root@srv-master1 ~]# vim certificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: hello-systemtest-cf
+  namespace: istio-system
+spec:
+  secretName: hello-systemtest-cf-tls
+  issuerRef:
+    name: letsencrypt-prod
+  commonName: hello.systemtest-cf
+  dnsNames:
+  - hello.systemtest.cf
+
+#Check that the certificate was issued by running 
+[root@srv-master1 ~]# kubectl get certificate -A.
+
+#Update the Gateway resource and reference the secret name with the certificate:
+[root@srv-master1 ~]# vim gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: public-gateway
+  namespace: hbc-survey
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - 'helloworld.systemtest.cf'
+    tls:
+      httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - 'helloworld.systemtest.cf'
+    tls:
+      mode: SIMPLE
+      credentialName: helloworld-systemtest-cf-tls
+
+
+[root@srv-master1 ~]# kubectl apply -f gateway.yaml
+
+#Update the VirtualService with the different host:
+[root@srv-master1 ~]# vim vs.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: helloworld
+spec:
+  hosts:
+    - hello.systemtest.cf
+  gateways:
+    - public-gateway
+  http:
+    - route:
+      - destination:
+          host: hello-world.default.svc.cluster.local
+          port:
+            number: 80
