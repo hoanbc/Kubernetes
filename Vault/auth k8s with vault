@@ -1,0 +1,40 @@
+###Create Auth Method###
+Login UI: vault.systemtest.local -> Access -> Auth Methods -> Enable new method -> Kubernetes -> Path: hbc-k8s -> Enable method
+->
+Kubernetes host: https://kubernetes.default.svc
+Kubernetes CA Certificate: root-ca.crt
+
+LDAP Options -> Certificate: Upload root CA
+User Attribute: sAMAccountName
+Name of Object to bind (binddn): CN=devops,OU=Account,OU=HBC,DC=systemtest,DC=local
+User DN: OU=HBC,DC=systemtest,DC=local
+Bindpass: 
+Group Attribute: sAMAccountName
+Group DN: OU=HBC,DC=systemtest,DC=local
+-> Save
+
+###Create Policy###
+Login UI: vault.systemtest.local -> Policy -> Create ACL policy ->
+Name: ldap-policy
+path "hbc-secret-project1/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+-> Save
+
+###Assign policy to account ldap###
+Login UI: vault.systemtest.local -> Access -> Auth Methods -> ldap -> Users -> Create User
+Name: devops
+Policy: ldap-policy
+-> Save
+
+###Create secret###
+Login UI: vault.systemtest.local -> Secret -> Enable new engine -> Enable KV Secrets Engine: kv -> Path: hbc-secrets-project1 -> Enable secret
+Login UI: vault.systemtest.local -> Secret -> hbc-secret-project1 -> Create secret ->
+Path for this secret: database
+Secret data:    username=123
+                password=123
+-> Save
+
+
+###Note###
+Use Path:  if you have use auth method multiple times
