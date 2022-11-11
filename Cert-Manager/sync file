@@ -1,0 +1,139 @@
+Tự động đồng bộ Kubernetes ConfigMaps và Secrets qua các Namespaces khác với Reflector
+Giới thiệu
+
+Trong bài này chúng ta sẽ tìm hiểu về một mẹo khá hay để đồng bộ ConfigMaps và Secrets qua các Namespaces khác, việc này sẽ rất tiện khi ta có một ConfigMaps mà cần sử dụng ở các Namespaces khác nhau.
+
+Mục lục
+
+Reflector là gì?
+Cài đặt Reflector
+Sử dụng
+Sử dụng chung với Cert Manager
+Kết luận
+Các bài viết liên quan
+image
+Để làm được việc đó rất đơn giản, ta sẽ sử dụng Reflector.
+
+Reflector là gì?
+Reflector là một Custom Resource được thiết kế để giúp ta tự động đồng bộ configmaps hoặc secrets từ một namespace này qua các namespace khác.
+
+Điểm hay đầu tiên của Reflector là nó sẽ giám sát các resources (configmaps hoặc secrets) mà ta chỉ định, nếu ở các namespace khác mà chưa có resources đó thì Reflector sẽ tạo một thằng mới, còn nếu có rồi thì thôi.
+
+Điểm hay thứ hai của Reflector là nếu các resources (configmaps hoặc secrets) mà nó đang giám sát có gì thay đổi thì sự thay đổi đó sẽ được đồng bộ qua các namespace khác.
+
+Cài đặt Reflector
+Ta dùng helm để cài Reflector.
+
+helm repo add emberstack https://emberstack.github.io/helm-charts
+helm repo update
+helm upgrade --install reflector emberstack/reflector
+Nếu các bạn không xài helm thì ta có thể cài trực tiếp.
+
+kubectl -n kube-system apply -f https://github.com/emberstack/kubernetes-reflector/releases/latest/download/reflector.yaml
+Kiểm tra
+
+NAME                         READY   STATUS    RESTARTS   AGE
+reflector-68bdfcbf78-kh4zr   1/1     Running   0          10s
+Chắc chắn là Pod ở trạng thái Running nhé.
+
+Sử dụng
+Ví dụ ta có một configmap như bên dưới, nó đang ở namespace tên là default.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: source-config-map
+data:
+  DB_URL: postgres
+  DB_PORT: 5432
+Để có thể đồng bộ configmap này qua toàn bộ các namespaces khác, ta cấu hình như sau.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: source-config-map
+  annotations:
+    reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+data:
+  DB_URL: postgres
+  DB_PORT: 5432
+Ta sẽ dùng thuộc tính annotations để cấu hình cho các resources mà ta cần Reflector giám sát.
+
+Nếu ta chỉ cần đồng bộ qua một số namespace nhất định, ta cấu hình như sau.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: source-config-map
+  annotations:
+    reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+    reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "dev,staging,review"
+data:
+  DB_URL: postgres
+  DB_PORT: 5432
+Ở trên ta thêm  reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "dev,staging,review" để báo cho Reflector biết ta chỉ cần đồng bộ qua 3 namespaces là dev, staging và review.
+
+Sử dụng chung với Cert Manager
+Một trường hợp rất phổ biến là ta sử dụng Reflector kết hợp với Cert Manager để tạo SSL cho nhiều namespace khác nhau.
+
+Ví dụ ta cần cấu hình SSL cho một subdomain là dev.devopsvn.tech, staging.devopsvn.tech.
+
+Ở namespace dev ta phải dùng Cert Manager để tạo một secret cho SSL tên là wildcard-devopsvn-tls, rồi ta cấu hình Ingress như dưới.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devopsvn
+  namespace: dev
+spec:
+  tls:
+  - hosts:
+      - dev.devopsvn.tech
+    secretName: wildcard-devopsvn-tls
+  rules:
+  - host: dev.devopsvn.tech
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: service1
+            port:
+              number: 80
+Ta làm tương tự cho namespace staging.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devopsvn
+  namespace: staging
+spec:
+  tls:
+  - hosts:
+      - staging.devopsvn.tech
+    secretName: wildcard-devopsvn-tls
+  rules:
+  - host: staging.devopsvn.tech
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: service1
+            port:
+              number: 80
+Công việc của ta lập lại khá nhiều, nhưng với Reflector thì ta chỉ cần tạo SSL ở một chỗ, sau đó SSL sẽ được đồng bộ qua các namespace khác.
+
+Ta cấu hình Cert Manager như sau để SSL được đồng bộ qua các namespace khác.
+
+apiVersion: cert-manager.io/v1
+kind: Certificate
+...
+spec:
+  secretTemplate:
+    annotations:
+      reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+      reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "dev,staging"
+  ...
