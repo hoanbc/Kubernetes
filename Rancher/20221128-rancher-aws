@@ -1,0 +1,207 @@
+###Deploy Rancher with Helm
+Step1: Add the helm chart repository
+[root@jump ~]# helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+
+Step2: Create a namespace for rancher
+[root@jump ~]# kubectl create namespace cattle-system
+
+Step3: Deploy rancher from helm with custom SSL
+[root@jump ~]# helm install rancher rancher-stable/rancher \
+  --namespace cattle-system \
+  --set hostname=rancher.yourdomainname.global \
+  --set bootstrapPassword=admin \
+  --set ingress.tls.source=secret \
+  --set replicas=1 #option
+
+Step3 (option): Deploy rancher from file chart with custom SSL (without internet)
+[root@jump ~]# helm install rancher ./rancher-2.6.9.tgz \
+  --namespace cattle-system \
+  --set hostname=rancher.yourdomainname.global \
+  --set bootstrapPassword=admin \
+  --set ingress.tls.source=secret \
+  --set replicas=1 #option
+
+Step4: Adding tls secrets
+[root@jump ~]# kubectl -n cattle-system create secret tls tls-rancher-ingress --cert=/ca/yourcertificate.crt   --key=/ca/yourcertificate.key
+
+Step 5: Verify that the rancher service is success deployed
+[root@jump ~]# kubectl -n cattle-system rollout status deploy/rancher
+[root@jump ~]# kubectl -n cattle-system get deploy rancher
+
+Step6: Verify that ingress config is allow access from nginx controller
+[root@jump ~]# kubectl -n cattle-system edit ingress/rancher
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rancher
+  namespace: cattle-system
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: rancher.yourdomainname.global
+    http:
+      paths:
+      - backend:
+          service:
+            name: rancher
+            port:
+              number: 80
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - rancher.yourdomainname.global
+    secretName: tls-rancher-ingress
+status:
+  loadBalancer:
+    ingress:
+    - hostname: xxxxx.elb.ap-southeast-1.amazonaws.com
+
+Step7: Access rancher UI with https://rancher.yourdomainname.global/dashboard/?setup=admin
+
+
+###Import existing EKS cluster to Rancher for Manage
+Step1: Create a IAM user with Access Token for access (example: esk-rancher) and assignment a policy as below
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "eks:DeleteFargateProfile",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "eks:DescribeFargateProfile",
+                "eks:ListTagsForResource",
+                "iam:ListRoleTags",
+                "ec2:CreateKeyPair",
+                "iam:CreateRole",
+                "eks:UpdateClusterConfig",
+                "iam:AttachRolePolicy",
+                "ec2:DescribeInternetGateways",
+                "eks:DescribeNodegroup",
+                "iam:DetachRolePolicy",
+                "iam:ListAttachedRolePolicies",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeKeyPairs",
+                "ec2:DescribeRouteTables",
+                "iam:GetRole",
+                "eks:ListNodegroups",
+                "ec2:DescribeLaunchTemplates",
+                "ec2:CreateTags",
+                "iam:DeleteRole",
+                "ec2:RunInstances",
+                "eks:DeleteCluster",
+                "eks:CreateFargateProfile",
+                "ec2:RevokeSecurityGroupIngress",
+                "eks:DeleteNodegroup",
+                "ec2:DescribeInstanceTypes",
+                "eks:UpdateNodegroupConfig",
+                "eks:DescribeCluster",
+                "eks:ListClusters",
+                "ec2:DescribeSubnets",
+                "ec2:DeleteKeyPair",
+                "eks:UpdateClusterVersion",
+                "ec2:DeleteTags",
+                "ec2:DescribeRegions",
+                "eks:UpdateNodegroupVersion",
+                "iam:ListInstanceProfilesForRole",
+                "iam:PassRole",
+                "ec2:DescribeAvailabilityZones",
+                "eks:ListUpdates",
+                "ec2:CreateSecurityGroup",
+                "eks:ListIdentityProviderConfigs",
+                "eks:CreateCluster",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "eks:UntagResource",
+                "iam:GetInstanceProfile",
+                "ec2:DescribeTags",
+                "ec2:DescribeLaunchTemplateVersions",
+                "iam:ListRoles",
+                "eks:CreateNodegroup",
+                "iam:ListInstanceProfiles",
+                "ec2:DescribeSecurityGroups",
+                "ec2:CreateLaunchTemplateVersion",
+                "ec2:DescribeImages",
+                "kms:ListKeys",
+                "eks:ListFargateProfiles",
+                "ec2:CreateLaunchTemplate",
+                "eks:DescribeUpdate",
+                "ec2:DescribeVpcs",
+                "eks:TagResource",
+                "ec2:DeleteSecurityGroup"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+Step2: Add the ARN IAM User to EKS cluster (use cli to access your eks cluster)
+[root@jump ~]# kubectl edit configmap aws-auth -n kube-system
+apiVersion: v1
+data:
+  mapRoles: |
+    - groups:
+      - system:bootstrappers
+      - system:nodes
+      .....................
+  mapUsers: |
+    - groups:
+      - system:masters
+      userarn: arn:aws:iam::123456:user/eks-rancher
+      username: eks-rancher
+
+Step3: Create Cloud Credentials
+Back to Rancher UI -> GLOBAL APPS -> Cluster Management ->  Cloud Credentials -> Create -> Amazon -> 
+Name: info of cloud credentials
+Access Key: info from step 1
+Secret Key: info from step 1
+Default Region: region running eks cluster
+
+Step4) Register existing EKS cluster to Rancher for manage
+Back to Rancher UI -> GLOBAL APPS -> Cluster Management ->  Cloud Credentials -> Cluster -> Import Existing -> Amazon EKS -> 
+Cluster Name: your eks cluster name
+Region: region running eks cluster
+Cloud Credentials: info from step 3
+Cluster to  register: your eks cluster
+-> Register Cluster
+
+####Host fix
+Hotfix1: If rancher agent not resolve rancher server you need add a host file to rancher agent
+Step1: Edit config deployment for rancher agent
+[root@jump ~]# kubectl edit deployment/cattle-cluster-agent -n cattle-system
+      dnsPolicy: ClusterFirst
+      hostAliases:
+      - hostnames:
+        - rancher.yourdomainname.global
+        ip: 10.1.0.1
+      - hostnames:
+        - rancher.yourdomainname.global
+        ip: 10.2.0.1
+Step2: Re-deploy rancher agent
+[root@jump ~]# kubectl rollout restart deployment/cattle-cluster-agent -n cattle-system
+
+Hostfix2: Delete a namespace in a terminated 
+Step1: Save a JSON file similar to the following:
+[root@jump ~]# kubectl get namespace yournamespace -o json > tempfile.json
+Step2: Remove the finalizers array block from the spec section of the JSON file. The following is an example of the spec section of a JSON file that contains the finalizers array block to remove:
+"spec": {
+        "finalizers": [
+            "kubernetes"
+        ]
+    }
+After removing the finalizers array block, the spec section of the JSON file looks like this:
+"spec" : {
+    }
+Step3: To apply the changes, run a command similar to the following:
+[root@jump ~]# kubectl replace --raw "/api/v1/namespaces/yournamespace/finalize" -f ./tempfile.json
+Step4: Verify that the terminating namespace is removed:
+[root@jump ~]# kubectl get yournamespace
+
+Step5 (Option): If the namespace is auto create from rancher manage, you need remove this line from namespace
+[root@jump ~]# kubectl edit ns yournamespace
+  finalizers:
+  - controller.cattle.io/namespace-auth
+
+Hostfix3: Forgot password rancher
+[root@jump ~]# kubectl -n cattle-system exec $(kubectl -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- ensure-default-admin
