@@ -1,0 +1,3 @@
+Users & Authentication -> Authentication Provider: ADFS -> Authorized Users & Groups -> Add Member -> Null
+
+User use for auth ADFS not have any group, you need add this user to group you want add to rancher
