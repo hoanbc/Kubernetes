@@ -1,0 +1,15 @@
+Link:
+https://rancher.com/docs/rancher/v2.6/en/admin-settings/authentication/microsoft-adfs/microsoft-adfs-setup/
+
+fix ingress:
+ingress:
+  extraAnnotations:
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-name: route
+
+
+Lưu ý: rancher đọc thuộc tính group adfs thông qua user thực hiện xác thực cấu hình adfs
+ví dụ sử dụng user devops cấu hình adfs trên rancher -> user devops có nhóm nào thì phần UI của rancher mới hiển thị lên nhóm đó. và nếu add thêm nhóm mới trên user devops -> reconfig lại thì rancher UI mới hiển thị
+
+Thứ tự cấp quyền -> Users&Authencation -> Auth Provider -> Add member -> add cluster -> add project
