@@ -32,3 +32,11 @@ Add file redisson-all-3.16.1.jar and redisson-tomcat-10-3.16.1.jar to /usr/local
 
 nginx-ingress: nginx.ingress.kubernetes.io/session-cookie-name: route
 Doc: https://github.com/redisson/redisson/issues/4352
+
+Build to container:
+FROM tomcat:latest
+COPY lib/* /usr/local/tomcat/lib/
+COPY conf/redisson.conf /usr/local/tomcat/
+COPY conf/context.xml /usr/local/tomcat/conf/
+ADD conf/sample.war /usr/local/tomcat/webapps/
+EXPOSE 8080
