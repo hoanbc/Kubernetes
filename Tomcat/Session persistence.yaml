@@ -1,0 +1,34 @@
+Add config to file: /usr/local/tomcat/conf/context.xml
+        <Manager pathname="SESSIONS.ser" />
+        <Manager className="org.redisson.tomcat.RedissonSessionManager"
+        configPath="${catalina.base}/redisson.conf"
+        readMode="REDIS" updateMode="DEFAULT" broadcastSessionEvents="false"
+        keyPrefix=""/>
+
+Add config to file: /usr/local/tomcat10/redisson.conf
+---
+singleServerConfig:
+  idleConnectionTimeout: 10000
+  connectTimeout: 10000
+  timeout: 3000
+  retryAttempts: 3
+  retryInterval: 1500
+  password: null
+  subscriptionsPerConnection: 5
+  clientName: null
+  address: "redis://192.168.1.241:6379"
+  subscriptionConnectionMinimumIdleSize: 1
+  subscriptionConnectionPoolSize: 50
+  connectionMinimumIdleSize: 24
+  connectionPoolSize: 64
+  database: 0
+  dnsMonitoringInterval: 5000
+threads: 16
+nettyThreads: 32
+codec: !<org.redisson.codec.MarshallingCodec> {}
+transportMode: "NIO"
+
+Add file redisson-all-3.16.1.jar and redisson-tomcat-10-3.16.1.jar to /usr/local/tomcat/lib
+
+nginx-ingress: nginx.ingress.kubernetes.io/session-cookie-name: route
+Doc: https://github.com/redisson/redisson/issues/4352
