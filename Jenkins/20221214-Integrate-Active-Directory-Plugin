@@ -1,0 +1,35 @@
+1) Install plugin active directory
+Login Jenkins -> Dashboard -> Manage Jenkins -> Plugin Manager -> Active Directory plugin -> Install
+
+2) Setting JDK file
+openssl s_client -showcerts -connect srv-dc.testvn.local:3269 </dev/null 2>/dev/null|openssl x509 -outform PEM > srv-dc.pem
+mkdir /var/lib/jenkins/.keystore/
+cp /usr/lib/jvm/java-11-openjdk-11.0.17.0.8-2.el7_9.x86_64/lib/security/cacerts /var/lib/jenkins/.keystore/
+keytool -keystore /var/lib/jenkins/.keystore/cacerts  -import -alias SRV-DC1 -file srv-dc1.pem  #Password: changeit
+keytool -keystore /var/lib/jenkins/.keystore/cacerts  -import -alias SRV-DC2 -file srv-dc2.pem  #Password: changeit
+
+vim /etc/sysconfig/jenkins
+JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true -Djavax.net.ssl.trustStore=/var/lib/jenkins/.keystore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+
+vim /usr/lib/systemd/system/jenkins.service
+Environment="JAVA_OPTS=-Djava.awt.headless=true -Djavax.net.ssl.trustStore=/var/lib/jenkins/.keystore/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+
+systemctl restart jenkins
+
+3) Integrate  Active Directory for Jenkins
+Dashboard -> Manage Jenkins -> Configure Global Security -> Security Realm -> Active Directory
+Domains
+  Domain Name: testvn.local
+  Domain controller: srv-dc1.testvn.local:3289, srv-dc2.testvn.local:3289
+  Bind DN: CN=ldap.jenkin,OU=TESTVN,DC=testvn,DC=local
+  Bind Password:
+  TLS Configuration: JDK TrustStore
+  Required TLS: Enable
+  Advance: 
+    - Enable StartTls: Disable
+    - Jenkins Internal Database: admin
+  Authorization: Project-based Matrix Authorization Strategy
+    
+  
+ Note: Current version 2.9 have bug, so you can't use "Test Domain" and "Active Directory Health Status"
+  
