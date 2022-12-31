@@ -1,0 +1,123 @@
+###Install Sonarqube in RHEL8
+
+#Install postgresql
+sudo dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+sudo dnf -qy module disable postgresql
+sudo dnf install -y postgresql15-server postgresql15-contrib
+
+sudo /usr/pgsql-15/bin/postgresql-15-setup initdb
+
+vim /var/lib/pgsql/15/data/pg_hba.conf
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     trust
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            md5
+# IPv6 local connections:
+host    all             all             ::1/128                 md5
+
+systemctl enable --now postgresql-15
+
+sudo passwd postgres
+su - postgres
+psql
+
+CREATE ROLE sonar WITH
+  LOGIN
+  NOSUPERUSER
+  INHERIT
+  CREATEDB
+  CREATEROLE
+  REPLICATION
+  PASSWORD 'QWEasdQWE123';
+
+CREATE DATABASE sonarqube
+  WITH 
+  OWNER = sonar
+  ENCODING = 'UTF8'
+  TABLESPACE = pg_default
+  CONNECTION LIMIT = -1;
+
+exit
+
+#Install JAVA
+sudo yum install java-11-openjdk-devel -y
+
+
+#Install SonarQube
+cd /opt
+https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-9.8.0.63668.zip
+unzip sonarqube-9.8.0.63668.zip
+rm -rf sonarqube-9.8.0.63668.zip
+mv sonarqube-9.8.0.63668 sonarqube
+vim /opt/sonarqube/conf/sonar.properties
+
+
+sudo chown -R sonarqube:sonarqube /opt/sonarqube
+
+vim /etc/systemd/system/sonarqube.service
+
+sonar.jdbc.username=sonar
+sonar.jdbc.password=ahihidongoc
+sonar.jdbc.url=jdbc:postgresql://localhost/sonarqube?currentSchema=public
+sonar.web.host=0.0.0.0
+sonar.web.port=9000
+sonar.web.http.maxThreads=50
+sonar.web.sessionTimeoutInMinutes=1440
+
+sudo systemctl enable --now sonarqube
+
+#Install Nginx
+dnf install nginx -y
+
+mkdir /etc/nginx/ssl
+cp testvn-click.* /etc/nginx/ssl
+
+vim /etc/nginx/conf.d/sonarqube.conf
+server {
+    listen      80;
+    server_name  sonarqube.testvn.click;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+        listen       443 ssl http2 default_server;
+        server_name  sonarqube.testvn.click;
+        ssl on;
+        ssl_certificate "/etc/nginx/ssl/testvn-click.crt";
+        ssl_certificate_key "/etc/nginx/ssl/testvn-click.key";
+        ssl_session_cache shared:SSL:1m;
+        ssl_session_timeout  10m;
+        ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;
+        ssl_ciphers HIGH:!aNULL:!eNULL:!EXPORT:!CAMELLIA:!DES:!MD5:!PSK:!RC4;
+        ssl_prefer_server_ciphers on;
+        client_max_body_size 50M;
+
+        location / {
+                proxy_set_header        Accept-Encoding   "";
+                proxy_set_header        Host              $http_host;
+                proxy_set_header        X-Real-IP $remote_addr;
+                proxy_set_header        X-Forwarded-By    $server_addr:$server_port;
+                proxy_set_header        X-Forwarded-For   $remote_addr;
+                proxy_set_header        X-Forwarded-Proto $scheme;
+                proxy_set_header        X-Real-IP               $remote_addr;
+                proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+                proxy_pass http://localhost:9000;
+                proxy_redirect      http://localhost:9000 https://sonarqube.testvn.click;
+        }
+
+        error_page 404 /404.html;
+            location = /40x.html {
+        }
+
+        error_page 500 502 503 504 /50x.html;
+            location = /50x.html {
+        }
+}
+
+systemctl enable --now nginx
+
+#Open firewall
+firewall-cmd --add-service={http,https} --permanent
+firewall-cmd --reload
