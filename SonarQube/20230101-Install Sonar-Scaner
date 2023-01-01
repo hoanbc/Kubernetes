@@ -1,0 +1,14 @@
+LINUX: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+MACOS: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-macosx.zip
+
+cd /otp/
+wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+unzip sonar-scanner-cli-4.7.0.2747-linux.zip
+mv sonar-scanner-cli-4.7.0.2747-linux sonar-scanner
+
+vim /opt/sonar-scanner/conf/sonar-scanner.properties
+#----- Default SonarQube server
+sonar.host.url=https://sonarqube.testvn.click
+
+#----- Default source code encoding
+sonar.sourceEncoding=UTF-8
