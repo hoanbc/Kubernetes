@@ -229,16 +229,20 @@ controller:
         fsGroup: 2000
   metrics:
     port: 10254
-    enabled: false
+    enabled: true
     service:
-      annotations: {}
+      annotations:
+        prometheus.io/port: "10254"
+        prometheus.io/scrape: "true"
       externalIPs: []
       loadBalancerSourceRanges: []
       servicePort: 10254
       type: ClusterIP
     serviceMonitor:
-      enabled: false
-      additionalLabels: {}
+      enabled: true
+      additionalLabels:
+        additionalLabels:
+        release: prometheus
       namespace: ""
       namespaceSelector: {}
       scrapeInterval: 30s
