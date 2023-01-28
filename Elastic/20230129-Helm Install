@@ -1,0 +1,188 @@
+###Install eck-operator with helm
+helm repo add elastic https://helm.elastic.co
+kubectl create ns hbc-elastic
+helm install elastic-operator elastic/eck-operator -n hbc-elastic
+
+###Install Elasticsearch
+[devops@k8s-master elastic]$ cat elasticsearch-values.yaml
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: hbc-elastic
+spec:
+  version: 8.6.0
+  nodeSets:
+  - name: default
+    count: 3
+    config:
+      node.roles: ["master", "data", "remote_cluster_client"]
+      node.store.allow_mmap: false
+    podTemplate:
+      metadata:
+        labels:
+          foo: elasticsearch
+      spec:
+        containers:
+          - name: elasticsearch
+            resources:
+              requests:
+                memory: 2Gi
+                cpu: 1
+              limits:
+                memory: 4Gi
+                cpu: 2
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+        storageClassName: nfs-external-storage
+  monitoring:
+    metrics:
+      elasticsearchRefs:
+      - name: monitoring
+    logs:
+      elasticsearchRefs:
+      - name: monitoring
+[devops@k8s-master elastic]$ kubectl apply -f elasticsearch-values.yaml
+
+[devops@k8s-master elastic]$ ca elasticsearch-nginx.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 10M
+    nginx.ingress.kubernetes.io/enable-access-log: "false"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  name: ingress-elasticsearch
+  namespace: hbc-elastic
+spec:
+  rules:
+  - host: elasticsearch.testvn.click
+    http:
+      paths:
+      - backend:
+          service:
+            name: elasticsearch-es-http
+            port:
+              number: 9200
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - elasticsearch.testvn.click
+    secretName: testvn-click-tls
+[devops@k8s-master elastic]$ kubectl apply -f elasticsearch-nginx.yaml
+
+###Install Kibana
+[devops@k8s-master elastic]$ cat kibana-values.yaml
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: elasticsearch
+  namespace: hbc-elastic
+spec:
+  version: 8.6.0
+  count: 1
+  elasticsearchRef:
+    name: elasticsearch
+  podTemplate:
+    metadata:
+      labels:
+        service: kibana
+    spec:
+      containers:
+        - name: kibana
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 0.5
+            limits:
+              memory: 2Gi
+              cpu: 2
+  http:
+    service:
+      spec:
+        type: ClusterIP
+    tls:
+      selfSignedCertificate:
+        subjectAltNames:
+        - dns: kibana.testvn.click
+  monitoring:
+    metrics:
+      elasticsearchRefs:
+      - name: monitoring
+    logs:
+      elasticsearchRefs:
+      - name: monitoring
+      
+[devops@k8s-master elastic]$ kubectl apply -f kibana-values.yaml    
+
+[devops@k8s-master elastic]$ cat kibana-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 10M
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  name: ingress-kibana
+  namespace: hbc-elastic
+spec:
+  rules:
+  - host: kibana.testvn.click
+    http:
+      paths:
+      - backend:
+          service:
+            name: elasticsearch-kb-http
+            port:
+              number: 5601
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - kibana.testvn.click
+    secretName: testvn-click-tls
+
+[devops@k8s-master elastic]$ kubectl apply -f kibana-ingress.yaml
+
+###Create fluent-bit-publisher role
+Login Kibana WebUI: https://kibana.testvn.click -> Management > Stack Management > Security > Roles -> Create role
+Role name: fluent_bit_publisher_role
+Cluster privileges: monitor / manage_index_template / manage_ilm
+Indices: *
+Privileges:monitor / create_index / create_doc / view_index_metadata / manage / manage_ilm
+
+###Create fluent-bit-publisher user
+Login Kibana WebUI: https://kibana.testvn.click -> Management > Stack Management > Security > Users, click Create user.
+Username: fluent_bit_publisher_user
+Password: QWEasdQWE123
+Roles: fluent_bit_publisher_role
+
+###Fluent-bit output example
+    [OUTPUT]
+        Name es
+        Match host.*
+        Host elasticsearch.testvn.click
+        Port 443
+        Logstash_Format On
+        Logstash_Prefix host
+        Retry_Limit False
+        HTTP_User fluent_bit_publisher_user
+        HTTP_Passwd QWEasdQWE123
+        Replace_Dots    On
+        TLS             On
+        TLS.verify      Off
+        Suppress_Type_Name On
+
