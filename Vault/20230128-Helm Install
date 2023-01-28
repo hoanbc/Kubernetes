@@ -110,6 +110,7 @@ Token Reviewer JWT: cat /var/run/secrets/kubernetes.io/serviceaccount/token
 -> Save 
 
   Or use CLI:
+    vault auth enable --path k8s-on-premise kubernetes
     vault write auth/k8s-on-premise/config \
     token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
     kubernetes_host=https://kubernetes.default.svc:443 \
@@ -129,8 +130,16 @@ WebUI -> Access -> k8s-on-premise -> Roles -> Create role ->
 Name: testvn-role
 Bound service account names: vault-auth
 Bound service account namespaces: *
-Generated Token's Policies: testvn-policy
+Generated Token's Policies: testvn-role
 Generated Token's Initial TTL: 144h
+-> Save
+
+   Or use CLI:
+        vault write auth/k8s-on-premise/role/testvn-role \
+        bound_service_account_names=vault-auth \
+        bound_service_account_namespaces='*' \
+        policies=testvn-policy \
+        ttl=1440h
 
 #Create secrest
 WebUI -> Secrets -> Enable new engine -> KV -> Next ->
@@ -180,7 +189,7 @@ spec:
       labels:
         app: orgchart
     spec:
-      serviceAccountName: vault-client
+      serviceAccountName: vault-auth
       containers:
         - name: orgchart
           image: jweissig/app:0.0.1
