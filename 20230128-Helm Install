@@ -1,0 +1,197 @@
+###Install repo and create namespace
+[root@srv-master1 vault]# helm repo add hashicorp https://helm.releases.hashicorp.com
+[root@srv-master1 vault]# kubectl create ns hbc-vault
+
+#Install consul
+[root@srv-master1 vault]# helm show values hashicorp/consul > values-consul.yaml
+[root@srv-master1 vault]# vim values-consul.yaml
+global:
+  datacenter: k8s-on-premise
+client:
+  enabled: true
+
+server:
+  enabled: true
+  replicas: 3
+  bootstrapExpect: 3
+  storage: 5Gi
+  storageClass: nfs-external-storage
+  disruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+
+helm install consul hashicorp/consul -n hbc-vault -f values-consul.yaml
+
+#Install vault
+[root@srv-master1 vault]# helm show values hashicorp/vault > values-vault.yaml
+[root@srv-master1 vault]# vim values-vault.yaml
+server:
+  enabled: true
+  ingress:
+    enabled: false
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    pathType: Prefix
+    activeService: true
+    hosts:
+      - host: vault.testvn.click
+    extraPaths:
+      - path: /*
+        backend:
+          service:
+            name: vault
+            port:
+              number: 8200
+    tls:
+      - secretName: testvn-click-tls
+        hosts:
+          - vault.testvn.click
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    mountPath: "/vault/data"
+    storageClass: nfs-external-storage
+    accessMode: ReadWriteOnce
+  ha:
+    enabled: true
+    replicas: 3
+
+[root@srv-master1 vault]# helm install vault hashicorp/vault -n hbc-vault -f values-vault.yaml
+
+#Gen key
+[root@srv-master1 vault]# kubectl -n hbc-vault exec vault-0 -- vault operator init -key-shares=1 -key-threshold=1 -format=json > cluster-keys.json
+
+[root@srv-master1 vault]# cat cluster-keys.json
+{
+  "unseal_keys_b64": [
+    "Fu4Udbf8zbkWHMkS0Jm6hh+bGi2M+241x0seJcLNkVY="
+  ],
+  "unseal_keys_hex": [
+    "16ee1475b7fccdb9161cc912d099ba861f9b1a2d8cfb6e35c74b1e25c2cd9156"
+  ],
+  "unseal_shares": 1,
+  "unseal_threshold": 1,
+  "recovery_keys_b64": [],
+  "recovery_keys_hex": [],
+  "recovery_keys_shares": 5,
+  "recovery_keys_threshold": 3,
+  "root_token": "hvs.paqE6e0jo8uE55M2h20T63wJ"
+}
+
+[root@srv-master1 vault]# VAULT_UNSEAL_KEY=Fu4Udbf8zbkWHMkS0Jm6hh+bGi2M+241x0seJcLNkVY=
+
+[root@srv-master1 vault]# kubectl -n hbc-vault exec vault-0 -- vault operator unseal $VAULT_UNSEAL_KEY
+Key             Value
+---             -----
+Seal Type       shamir
+Initialized     true
+Sealed          false
+Total Shares    1
+Threshold       1
+Version         1.10.3
+Storage Type    consul
+Cluster Name    vault-cluster-2cc76ce9
+Cluster ID      9dda7539-9832-8ee9-b2b2-5669c88b184e
+HA Enabled      true
+HA Cluster      https://vault-0.vault-internal:8201
+HA Mode         active
+Active Since    2022-07-22T17:23:38.908799737Z
+
+[root@srv-master1 vault]# kubectl -n hbc-vault exec vault-1 -- vault operator unseal $VAULT_UNSEAL_KEY
+[root@srv-master1 vault]# kubectl -n hbc-vault exec vault-2 -- vault operator unseal $VAULT_UNSEAL_KEY
+
+#Access https://vault.testvn.click -> root key: hvs.paqE6e0jo8uE55M2h20T63wJ
+
+#Create Auth Methods
+WebUI -> Access -> Auth Methods -> Enable new method -> Infra: Kubernetes -> Path: k8s-on-premise -> Enable Methods -> 
+Kubernetes host: K8S API (https://kube-apiserver.testvn.local:6443)
+Kubernetes CA Certificate: Root CA
+Token Reviewer JWT: cat /var/run/secrets/kubernetes.io/serviceaccount/token 
+-> Save 
+
+  Or use CLI:
+    vault write auth/k8s-on-premise/config \
+    token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+    kubernetes_host=https://kubernetes.default.svc:443 \
+    kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+    issuer="https://kubernetes.default.svc.cluster.local"
+
+#Create Policy
+WebUI -> Create ACL policy -> 
+Name: testvn-policy
+Policy:
+        path "testvn-secrets/data/database/config" {
+            capabilities = ["create", "read", "update", "delete", "list"]
+        }
+
+#Create role
+WebUI -> Access -> k8s-on-premise -> Roles -> Create role -> 
+Name: testvn-role
+Bound service account names: vault-auth
+Bound service account namespaces: *
+Generated Token's Policies: testvn-policy
+Generated Token's Initial TTL: 144h
+
+#Create secrest
+WebUI -> Secrets -> Enable new engine -> KV -> Next ->
+Path: testvn-secrets/database/config
+Version: 2
+-> Create secret -> 
+Path for this secret: testvn-secrets/database/config
+Secret data
+Key: password / Value: db-secret-password
+
+###Create demo deployment with vault
+kubectl create ns hbc-demo
+
+kubectl create sa vault-auth -n hbc-demo
+
+vim deployment-orgchart.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orgchart
+  labels:
+    app: orgchart
+spec:
+  selector:
+    matchLabels:
+      app: orgchart
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/service: 'https://vault.testvn.click'
+        vault.hashicorp.com/role: 'testvn-role'
+        vault.hashicorp.com/agent-inject-secret-test123.txt: 'testvn-secrets/data/database/config'
+        vault.hashicorp.com/agent-inject-secret-test456.txt: 'testvn-secrets/data/database/config'
+        vault.hashicorp.com/auth-path: 'auth/k8s-on-premise'
+        vault.hashicorp.com/agent-inject-status: 'update'
+        vault.hashicorp.com/agent-inject-template-test123.txt: |
+          {{- with secret "testvn-secrets/data/database/config" -}}
+          postgresql://{{ .Data.data.username }}@postgres:123/wizard
+          {{- end -}}
+        vault.hashicorp.com/agent-inject-template-test456.txt: |
+          {{- with secret "testvn-secrets/data/database/config" -}}
+          export abcd={{ .Data.data.password }}
+          {{- end -}}
+
+      labels:
+        app: orgchart
+    spec:
+      serviceAccountName: vault-client
+      containers:
+        - name: orgchart
+          image: jweissig/app:0.0.1
+
+#Check:
+[devops@k8s-master vault]$ kubectl get all -n hbc-demo
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/orgchart-7d9f46bbdd-6b5fv   2/2     Running   0          6m26s
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/orgchart   1/1     1            1           6m26s
+
+[devops@k8s-master vault]$ kubectl exec -n hbc-demo -it pod/orgchart-7d9f46bbdd-6b5fv  -- cat /vault/secrets/test456.txt
+export abcd=db-secret-password[devops@k8s-master vault]$
