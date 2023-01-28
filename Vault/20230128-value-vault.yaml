@@ -1,0 +1,143 @@
+global:
+  enabled: true
+injector:
+  enabled: true
+  replicas: 1
+  port: 8080
+  leaderElector:
+    enabled: true
+  metrics:
+    enabled: false
+  image:
+    repository: "hashicorp/vault-k8s"
+    tag: "1.1.0"
+    pullPolicy: IfNotPresent
+  agentImage:
+    repository: "hashicorp/vault"
+    tag: "1.12.1"
+  agentDefaults:
+    cpuLimit: "500m"
+    cpuRequest: "250m"
+    memLimit: "128Mi"
+    memRequest: "64Mi"
+    template: "map"
+    templateConfig:
+      exitOnRetryFailure: true
+  authPath: "auth/kubernetes"
+  logLevel: "info"
+  logFormat: "standard"
+  revokeOnShutdown: false
+  webhook:
+    failurePolicy: Ignore
+    matchPolicy: Exact
+    timeoutSeconds: 30
+    objectSelector: |
+      matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: NotIn
+        values:
+        - {{ template "vault.name" . }}-agent-injector
+    annotations: {}
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ template "vault.name" . }}-agent-injector
+              app.kubernetes.io/instance: "{{ .Release.Name }}"
+              component: webhook
+          topologyKey: kubernetes.io/hostname
+
+server:
+  enabled: true
+  image:
+    repository: "hashicorp/vault"
+    tag: "1.12.1"
+    pullPolicy: IfNotPresent
+  updateStrategyType: "OnDelete"
+  ingress:
+    enabled: false
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    pathType: Prefix
+    activeService: true
+    hosts:
+      - host: vault.testvn.click
+    extraPaths:
+      - path: /*
+        backend:
+          service:
+            name: vault
+            port:
+              number: 8200
+    tls:
+      - secretName: testvn-click-tls
+        hosts:
+          - vault.testvn.click
+  authDelegator:
+    enabled: true
+  readinessProbe:
+    enabled: true
+    failureThreshold: 2
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  livenessProbe:
+    enabled: false
+    path: "/v1/sys/health?standbyok=true"
+    failureThreshold: 2
+    initialDelaySeconds: 60
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 3
+  terminationGracePeriodSeconds: 10
+  preStopSleepSeconds: 5
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ template "vault.name" . }}
+              app.kubernetes.io/instance: "{{ .Release.Name }}"
+              component: server
+          topologyKey: kubernetes.io/hostname
+  service:
+    enabled: true
+    active:
+      enabled: true
+    standby:
+      enabled: true
+    instanceSelector:
+      enabled: true
+    publishNotReadyAddresses: true
+    externalTrafficPolicy: Cluster
+    port: 8200
+    targetPort: 8200
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    mountPath: "/vault/data"
+    storageClass: nfs-external-storage
+    accessMode: ReadWriteOnce
+
+  ha:
+    enabled: true
+    replicas: 3
+    config: |
+      ui = true
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+      service_registration "kubernetes" {}
+    disruptionBudget:
+      enabled: true
+      maxUnavailable: null
+  serviceAccount:
+    create: true
