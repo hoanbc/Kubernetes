@@ -1,0 +1,7 @@
+type: s3
+config:
+  bucket: testvn-prometheus
+  endpoint: s3.amazonaws.com
+  region: ap-southeast-1
+  access_key: AKI1111RSDV
+  secret_key: 1w9WMZcy1111BIn2bpFAq5iWViiWe8D

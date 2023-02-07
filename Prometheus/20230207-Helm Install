@@ -1,0 +1,14 @@
+###Add helm repo
+helm repo add bitnami https://charts.bitnami.com/bitnami
+
+###Install prometheus-operator
+kubectl -n hbc-monitoring create secret generic thanos-objstore-config --from-file=thanos.yaml=thanos-bucket.yaml
+kubectl -n hbc-monitoring create secret generic additional-scrape-configs --from-file=prometheus-additional.yaml=additional-scrape-configs.yaml
+
+helm install prometheus-operator bitnami/kube-prometheus -f  prometheus-operator-values.yaml  -n hbc-monitoring
+
+###Install grafana
+helm install grafana bitnami/grafana -n hbc-monitoring --set admin.password=QWEasdQWE123
+
+###Install thanos
+helm install thanos bitnami/thanos -f thanos-values.yaml -n hbc-monitoring

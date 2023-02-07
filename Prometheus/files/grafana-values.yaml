@@ -1,0 +1,140 @@
+image:
+  registry: docker.io
+  repository: bitnami/grafana
+  tag: 9.3.2-debian-11-r11
+  pullPolicy: IfNotPresent
+admin:
+  user: "admin"
+  password: "Q11123"
+  existingSecret: ""
+  existingSecretPasswordKey: password
+smtp:
+  enabled: false
+  user: user
+  password: password
+  host: ""
+  fromAddress: ""
+  fromName: ""
+  skipVerify: "false"
+  existingSecret: ""
+  existingSecretUserKey: user
+  existingSecretPasswordKey: password
+plugins: ""
+ldap:
+  enabled: false
+  allowSignUp: false
+  configuration: ""
+  configMapName: ""
+  secretName: ""
+  uri: ""
+  binddn: ""
+  bindpw: ""
+  basedn: ""
+  searchAttribute: "uid"
+  searchFilter: ""
+  extraConfiguration: ""
+  tls:
+    enabled: false
+    startTls: false
+    skipVerify: false
+    certificatesMountPath: /opt/bitnami/grafana/conf/ldap/
+    certificatesSecret: ""
+    CAFilename: ""
+    certFilename: ""
+    certKeyFilename: ""
+config:
+  useGrafanaIniFile: false
+  grafanaIniConfigMap: ""
+  grafanaIniSecret: ""
+dashboardsProvider:
+  enabled: false
+  configMapName: ""
+dashboardsConfigMaps: []
+datasources:
+  secretName: ""
+  secretDefinition: {}
+notifiers:
+  configMapName: ""
+grafana:
+  replicaCount: 1
+  updateStrategy:
+    type: RollingUpdate
+  hostAliases: []
+  schedulerName: ""
+  terminationGracePeriodSeconds: ""
+  priorityClassName: ""
+  podLabels: {}
+  podAnnotations: {}
+  podAffinityPreset: ""
+  podAntiAffinityPreset: soft
+  containerPorts:
+    grafana: 3000
+  nodeAffinityPreset:
+    type: ""
+    key: ""
+    values: []
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []
+  topologySpreadConstraints: []
+  podSecurityContext:
+    enabled: true
+    runAsUser: 1001
+    fsGroup: 1001
+    runAsNonRoot: true
+  containerSecurityContext:
+    enabled: true
+    runAsUser: 1001
+  resources:
+    limits: {}
+    requests: {}
+  livenessProbe:
+    enabled: true
+    path: /api/health
+    scheme: HTTP
+    initialDelaySeconds: 120
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+  readinessProbe:
+    enabled: true
+    path: /api/health
+    scheme: HTTP
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+  startupProbe:
+    enabled: false
+    path: /api/health
+    scheme: HTTP
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+persistence:
+  enabled: true
+  storageClass: "nfs-external-storage"
+  accessMode: ReadWriteOnce
+  size: 10Gi
+
+ingress:
+  name: ingress-grafana
+  enabled: true
+  pathType: ImplementationSpecific
+  hostname: grafana.testvn.click
+  annotations:
+     kubernetes.io/ingress.class: nginx
+  path: /
+  backend:
+    serviceName: grafana
+    servicePort: 3000
+  extraTls:
+    - hosts:
+       - grafana.testvn.click
+      secretName: testvn-click-tls
+metrics:
+  enabled: true

@@ -1,0 +1,105 @@
+###Prometheus-Operator
+operator:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnami/prometheus-operator
+    tag: 0.62.0-debian-11-r0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    
+###Prometheus with thanos
+prometheus:
+  enabled: true
+  replicas: 1
+  retention: "2h"
+  retentionSize: "6GB"
+  disableCompaction: true
+  image:
+    registry: docker.io
+    repository: bitnami/prometheus
+    tag: 2.41.0-debian-11-r5
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+  externalLabels:
+    cluster: k8s-local
+  thanos:
+    create: false
+    image:
+      registry: docker.io
+      repository: bitnami/thanos
+      tag: 0.30.1-scratch-r4
+      pullPolicy: IfNotPresent
+    objectStorageConfig:
+      secretKey: thanos.yaml
+      secretName: thanos-objstore-config
+    service:
+      type: LoadBalancer
+      ports:
+        grpc: 10901
+  persistence:
+    enabled: true
+    storageClass: "nfs-external-storage"
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+  prometheusExternalLabelNameClear: true
+  additionalScrapeConfigs:
+    enabled: true
+    type: external
+    external:
+      name: additional-scrape-configs
+      key: prometheus-additional.yaml
+      
+###AlertManager
+alertmanager:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: bitnami/alertmanager
+    tag: 0.25.0-debian-11-r4
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    
+  
+###Exporters
+exporters:
+  node-exporter:
+    enabled: true
+
+  kube-state-metrics:
+    enabled: true
+
+kube-state-metrics:
+  serviceMonitor:
+    enabled: true
+kubelet:
+  enabled: true
+
+blackboxExporter:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnami/blackbox-exporter
+    tag: 0.23.0-debian-11-r10
+    pullPolicy: IfNotPresent
+
+kubeApiServer:
+  enabled: true
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+coreDns:
+  enabled: true
+
+kubeProxy:
+  enabled: false
+  
+  
