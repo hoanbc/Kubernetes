@@ -8,7 +8,7 @@ kubectl -n hbc-monitoring create secret generic additional-scrape-configs --from
 helm install prometheus-operator bitnami/kube-prometheus -f  prometheus-operator-values.yaml  -n hbc-monitoring
 
 ###Install grafana
-helm install grafana bitnami/grafana -n hbc-monitoring --set admin.password=QWEasdQWE123
+helm install grafana bitnami/grafana -n hbc-monitoring --set admin.password=1111212
 
 ###Install thanos
 helm install thanos bitnami/thanos -f thanos-values.yaml -n hbc-monitoring
