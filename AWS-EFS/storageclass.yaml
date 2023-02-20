@@ -1,0 +1,14 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+  name: aws-efs
+parameters:
+  directoryPerms: "755"
+  fileSystemId: fs-003b0ccd300f2e6e97
+  gidRangeEnd: "2000"
+  gidRangeStart: "1000"
+  provisioningMode: efs-ap
+provisioner: efs.csi.aws.com
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
