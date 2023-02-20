@@ -1,4 +1,44 @@
+###Add helm aws-efs repo
 helm repo add aws-efs-csi-driver https://kubernetes-sigs.github.io/aws-efs-csi-driver/
 helm repo update
 
+
+
+###Create Role for sa account
+AWS -> IAM -> Role -> Create Role -> Trusted entity type: Web identity -> Identity provider: oidc.eks.ap.... / Audience: sts.amazonaws.com -> Next -> Policy name: AmazonEKS_EFS_CSI_Driver_Policy -> Name: AmazonEKS_EFS_CSI_Driver_Role
+
+example:
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::111122223333:oidc-provider/oidc.eks.ap-southeast-1.amazonaws.com/id/EC8CC79ECA7C89835103182EB6BF9"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "oidc.eks.ap-southeast-1.amazonaws.com/id/EC8C19ECA7C891182EB6BF9:sub": "system:serviceaccount:kube-system:efs-csi-controller-sa"
+                }
+            }
+        }
+    ]
+}
+
+###Install aws-efs with helm
 helm install aws-efs-csi-driver aws-efs-csi-driver/aws-efs-csi-driver --namespace kube-system
+
+kubectl annotate serviceaccount efs-csi-controller-sa   -n kube-system   eks.amazonaws.com/role-arn=arn:aws:iam::111122223333:role/AmazonEKS_EBS_CSI_DriverRole
+
+
+###Test create storage class
+kubectl apply -f storageclass.yaml
+
+###Test create a pod with efs volume
+kubectl apply -f teststorage.yaml
+
+Ex: 
+https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html
+https://archive.eksworkshop.com/beginner/190_efs/efs-csi-driver/
+https://aws.amazon.com/vi/blogs/containers/introducing-efs-csi-dynamic-provisioning/
