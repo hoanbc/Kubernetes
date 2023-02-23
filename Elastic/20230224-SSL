@@ -1,0 +1,5 @@
+ES_HOME=/usr/share/elasticsearch
+bin/elasticsearch-certutil cert --ca /tmp/cert/elastic-stack-ca.p12
+bin/elasticsearch-certutil cert  --pem --in /tmp/cert/instance.yml --out /tmp/cert/certs.zip --ca /tmp/cert/elastic-stack-ca.p12
+openssl pkcs12 -in elastic-stack-ca.p12 -out rootca.key -nodes -nocerts
+openssl pkcs12 -in elastic-stack-ca.p12 -out rootca.crt --nokeys
