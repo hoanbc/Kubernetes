@@ -11,16 +11,18 @@ sonarqube   -   nofile   131072
 sonarqube   -   nproc    8192
 
 
-sudo useradd sonar
-chage -M 99999 sonar
+sudo useradd -M -r sonarqube
+chage -M 99999 sonarqube
 
+###JAVA Offline
 wget https://download.oracle.com/java/17/archive/jdk-17.0.6_linux-x64_bin.rpm
 
+###POSTGRESQL Offline
+https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-7-x86_64/postgresql14-server-14.7-1PGDG.rhel7.x86_64.rpm
 
+###POSTGRESQL Online
 sudo yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
 sudo yum install -y postgresql14-server
-
-https://download.postgresql.org/pub/repos/yum/14/redhat/rhel-7-x86_64/postgresql14-server-14.7-1PGDG.rhel7.x86_64.rpm
 
 sudo /usr/pgsql-14/bin/postgresql-14-setup initdb
 sudo systemctl enable postgresql-14
@@ -39,9 +41,7 @@ psql
 postgres=# alter user postgres with password 'StrongPassword';
 ALTER ROLE
 postgres=# exit
-
-createdb --template=template0 --locale=en_US.UTF-8 --encoding=UTF8 -U postgres symplcms
--bash-4.2$ createdb sonarqube
+-bash-4.2$ createdb sonarqube --locale=en_US.UTF-8 --encoding=UTF8 -U postgres symplcms
 -bash-4.2$ psql
 postgres=# CREATE USER sonarqube WITH PASSWORD 'StrongPassword';
 postgres=# GRANT ALL PRIVILEGES ON DATABASE sonarqube to sonarqube;
@@ -70,9 +70,9 @@ sonar.search.javaOpts=-Xmx512m -Xms512m -XX:MaxDirectMemorySize=256m -XX:+HeapDu
 sonar.path.data=/var/sonarqube/data
 sonar.path.temp=/var/sonarqube/temp
 
-sudo chown -R sonar:sonar /opt/sonarqube
+sudo chown -R sonarqube:sonarqube /opt/sonarqube
 sudo mkdir -p /var/sonarqube
-sudo chown -R sonar:sonar /var/sonarqube
+sudo chown -R sonarqube:sonarqube /var/sonarqube
 
 sudo vim /etc/systemd/system/sonarqube.service
 [Unit]
@@ -83,10 +83,10 @@ After=syslog.target network.target
 Type=forking
 ExecStart=/opt/sonarqube/bin/linux-x86-64/sonar.sh start
 ExecStop=/opt/sonarqube/bin/linux-x86-64/sonar.sh stop
-LimitNOFILE=65536
-LimitNPROC=4096
-User=sonar
-Group=sonar
+LimitNOFILE=131072
+LimitNPROC=8192
+User=sonarqube
+Group=sonarqube
 Restart=on-failure
 
 [Install]
@@ -95,118 +95,11 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 sudo systemctl enable --now sonarqube.service
 
+###Default Account
 admin / admin
 
 
-
-yum install -y nginx
-mkdir /etc/nginx/ssl
-
-/etc/nginx/nginx.conf 
-
-user nginx;
-worker_processes auto;
-error_log /var/log/nginx/error.log;
-pid /run/nginx.pid;
-
-# Load dynamic modules. See /usr/share/nginx/README.dynamic.
-include /usr/share/nginx/modules/*.conf;
-
-events {
-    
-        worker_connections  1024;
-        multi_accept        on;
-        use                 epoll;
-        
-}
-
-http {
-        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                                            '$status $body_bytes_sent "$http_referer" '
-                                            '"$http_user_agent" "$http_x_forwarded_for"';
-
-        access_log  /var/log/nginx/access.log  main;
-
-        sendfile            on;
-        tcp_nopush          on;
-        tcp_nodelay         on;
-        keepalive_timeout   65;
-        types_hash_max_size 2048;
-        
-        # Character set
-        charset utf-8;
-
-        # Required to prevent bypassing of DNS cache!!
-        resolver 127.0.0.1 ipv6=off;
-        
-        # allow the server to close the connection after a client stops responding. Frees up socket-associated memory.
-        reset_timedout_connection on;
-        
-        # Security Headers
-        server_tokens off;
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-Content-Type-Options nosniff always;
-        add_header X-XSS-Protection "1; mode=block" always;
-        add_header "X-Permitted-Cross-Domain-Policies" "master-only";
-        add_header "X-Download-Options" "noopen";
-        
-        # Buffers
-        client_header_timeout 300;
-        client_body_timeout 300;
-        fastcgi_read_timeout 300;
-        client_max_body_size 32m;
-        fastcgi_buffers 8 128k;
-        fastcgi_buffer_size 128k;
-
-        # Compression
-        gzip  on;
-        gzip_vary on;
-        gzip_comp_level 1;
-        gzip_min_length 256;
-        gzip_proxied expired no-cache no-store private auth;
-        gzip_disable "MSIE [1-6]\.";
-        gzip_types
-          application/atom+xml
-          application/javascript
-          application/json
-          application/ld+json
-          application/manifest+json
-          application/rss+xml
-          application/vnd.geo+json
-          application/vnd.ms-fontobject
-          application/x-font-ttf
-          application/x-web-app-manifest+json
-          application/x-javascript
-          application/xhtml+xml
-          application/xml
-          font/opentype
-          image/bmp
-          image/svg+xml
-          image/x-icon
-          text/cache-manifest
-          text/css
-          text/xml
-          text/plain
-          text/javascript
-          text/vcard
-          text/vnd.rim.location.xloc
-          text/vtt
-          text/x-component
-          text/x-cross-domain-policy;
-    
-            
-        include             /etc/nginx/mime.types;
-        default_type        application/octet-stream;
-
-        # Load modular configuration files from the /etc/nginx/conf.d directory.
-        # See http://nginx.org/en/docs/ngx_core_module.html#include
-        # for more information.
-        
-        include /etc/nginx/conf.d/*.conf;
-
-}
-
-
+###NGINX
 /etc/nginx/conf.d/sonar.conf 
 server {
     
@@ -256,3 +149,25 @@ server {
         }
 
 }
+
+###HTTPD
+[root@srv-sonarqube ~]# cat /etc/httpd/conf.d/sonarqube.conf
+ProxyRequests Off
+ProxyPreserveHost On
+<VirtualHost *:443>
+  ServerName sonarqube.testvn.click
+  SSLEngine On
+  SSLProxyEngine On
+  SSLCertificateFile    /etc/httpd/ssl/public.crt
+  SSLCertificateKeyFile /etc/httpd/ssl/private.key
+  ProxyPass / http://localhost:9000/
+  ProxyPassReverse / https://sonarqube.testvn.click
+  RequestHeader set X-Forwarded-Proto "https"
+  #ErrorLog logs/somecompany/sonar/error.log
+  #CustomLog logs/somecompany/sonar/access.log common
+</VirtualHost>
+
+
+###Change Server base URL
+https://sonarqube.testvn.click/ -> Administrator -> General -> Server base URL: https://sonarqube.testvn.click
+
