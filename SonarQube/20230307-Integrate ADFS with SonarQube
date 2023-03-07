@@ -1,0 +1,39 @@
+###Enable SAML
+https://sonarqube.testvn.click/ -> Administration -> Authentication -> SAML -> 
+Application ID*: https://sonarqube.testvn.click
+Provider Name*: ADFS-LotteFN
+Provider ID*: http://adfs.testvn.local/adfs/services/trust
+SAML login url*: https://adfs.testvn.local/adfs/ls/IdpInitiatedSignOn.aspx
+Identity provider certificate*: ADFS Console -> Service -> Certificates -> Token-signing -> Export cert with Base-64 -> Copy to here
+SAML user login attribute*: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn
+SAML user name attribute*: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+SAML user email attribute: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress
+
+###Check httpd proxy setting
+[root@srv-sonarqube ~]# cat /etc/httpd/conf.d/sonarqube.conf
+ProxyRequests Off
+ProxyPreserveHost On
+<VirtualHost *:443>
+  ServerName sonarqube.testvn.click
+  SSLEngine On
+  SSLProxyEngine On
+  SSLCertificateFile    /etc/httpd/ssl/public.crt
+  SSLCertificateKeyFile /etc/httpd/ssl/private.key
+  ProxyPass / http://localhost:9000/
+  ProxyPassReverse / https://sonarqube.testvn.click
+  RequestHeader set X-Forwarded-Proto "https"
+  ErrorLog logs/sonar/error.log
+  CustomLog logs/sonar/access.log common
+</VirtualHost>
+
+###Create Relying Party Trust
+ADFS Console -> Relying Party Trust -> Add Relying Party Trust -> Enter data manually -> Display name: SonarQubes -> Enable support for the SAML 2.0: https://sonarqube.testvn.click/oauth2/callback/saml ->
+Relying party trút identifier: https://sonarqube.testvn.click  -> Finish -> Edit Claim Isuance Policy -> Add Rule -> Send LDAP Attributes as Claims -> Claim rule name: SonarQube -> Attribute store: Active Directory ->
+User-Principal-Name / UPN
+Display-Name  / Name
+E-Mail-Address  / Email Address
+SAM-Account-Name  / Name ID
+
+-> OK
+
+###Check login with ADFS
