@@ -1,0 +1,36 @@
+###Install vault
+yum install -y yum-utils
+yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+yum --showduplicates list vault
+yum install vault-1.12.4-1
+
+vim /etc/vault.d/vault.hcl
+ui = true
+disable_mlock = true
+storage "file" {
+  path = "/opt/vault/data"
+}
+listener "tcp" {
+  address       = "0.0.0.0:8200"
+  tls_disable = "true"
+}
+api_addr = "http://0.0.0.0:8200"
+
+yum install -y httpd mod_ssl
+vim /etc/httpd/conf.d/vault.conf
+ProxyRequests Off
+ProxyPreserveHost On
+<VirtualHost *:443>
+  ServerName vault.testvn.click
+  SSLEngine On
+  SSLProxyEngine On
+  SSLCertificateFile    /etc/httpd/ssl/public.crt
+  SSLCertificateKeyFile /etc/httpd/ssl/private.key
+  ProxyPass / http://localhost:8200/
+  ProxyPassReverse / http://localhost:8200
+  RequestHeader set X-Forwarded-Proto "https"
+  ErrorLog /var/log/httpd/vault-error.log
+  CustomLog /var/log/httpd/vault-access.log common
+</VirtualHost>
+
+systemctl enable --now httpd
