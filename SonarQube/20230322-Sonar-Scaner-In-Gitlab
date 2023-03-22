@@ -1,0 +1,37 @@
+sonarqube-check:
+  image: 
+    name: registry.testvn.click:5000/hoanbc/sonar-scanner-cli
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script: 
+    - sonar-scanner
+  allow_failure: true
+  only:
+    - main
+
+
+###Note
+Build Sonar Scanner CLI with Self-Sign
+If you need to configure a self-signed certificate for the scanner to communicate with your SonarQube instance, you can use a volume under /tmp/cacerts to add it to the containers java trust store:
+
+docker pull sonarsource/sonar-scanner-cli
+docker run \
+    --rm \
+    -v ${YOUR_CERTS_DIR}/cacerts:/tmp/cacerts \
+    -v ${YOUR_CACHE_DIR}:/opt/sonar-scanner/.sonar/cache \
+    -v ${YOUR_REPO}:/usr/src \
+    -e SONAR_HOST_URL="http://${SONARQUBE_URL}" \
+    sonarsource/sonar-scanner-cli
+Alternatively, you can create your own container that includes the modified cacerts file. Create a Dockerfile with the following contents:
+
+FROM sonarsource/sonar-scanner-cli
+COPY cacerts /usr/lib/jvm/default-jvm/jre/lib/security/cacerts
+Then, assuming both the cacerts and Dockerfile are in the current directory, create the new image with a command such as:
+
+docker build --tag our-custom/sonar-scanner-cli .
