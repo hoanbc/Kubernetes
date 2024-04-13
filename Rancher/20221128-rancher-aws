@@ -166,6 +166,21 @@ Cloud Credentials: info from step 3
 Cluster to  register: your eks cluster
 -> Register Cluster
 
+
+####Upgrade rancher
+Step1) Check current config
+F:\HOANBC\1_Tools\PingPort>helm get values rancher -n cattle-system -o yaml
+bootstrapPassword: admin
+hostname: rancher.lottefinance.vn
+ingress:
+  tls:
+    source: secret
+replicas: 1
+
+Step2) Run upgrade
+F:\HOANBC\3_Project\19_AWS\EKS\Helm>helm upgrade rancher rancher -n cattle-system
+Release "rancher" has been upgraded. Happy Helming!
+
 ####Host fix
 Hotfix1: If rancher agent not resolve rancher server you need add a host file to rancher agent
 Step1: Edit config deployment for rancher agent
@@ -205,3 +220,6 @@ Step5 (Option): If the namespace is auto create from rancher manage, you need re
 
 Hostfix3: Forgot password rancher
 [root@jump ~]# kubectl -n cattle-system exec $(kubectl -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- ensure-default-admin
+
+
+
